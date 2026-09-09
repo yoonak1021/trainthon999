@@ -310,6 +310,10 @@ export async function addCustomItem(input: {
   subscale?: string | null
   left_anchor?: string | null
   right_anchor?: string | null
+  left_anchor_kr?: string | null
+  left_anchor_en?: string | null
+  right_anchor_kr?: string | null
+  right_anchor_en?: string | null
   min_value?: number | null
   max_value?: number | null
   step_value?: number | null
@@ -331,10 +335,10 @@ export async function addCustomItem(input: {
     step_value: input.step_value ?? null,
     left_anchor: input.left_anchor ?? null,
     right_anchor: input.right_anchor ?? null,
-    left_anchor_kr: input.left_anchor ?? null,
-    left_anchor_en: input.left_anchor ?? null,
-    right_anchor_kr: input.right_anchor ?? null,
-    right_anchor_en: input.right_anchor ?? null,
+    left_anchor_kr: input.left_anchor_kr ?? input.left_anchor ?? null,
+    left_anchor_en: input.left_anchor_en ?? null,
+    right_anchor_kr: input.right_anchor_kr ?? input.right_anchor ?? null,
+    right_anchor_en: input.right_anchor_en ?? null,
     variable_name: input.variable_name,
     scale_name: input.scale_name ?? null,
     scale_name_kr: input.scale_name ?? null,
