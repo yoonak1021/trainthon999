@@ -136,6 +136,9 @@ export function StudyDetailPage() {
 
       <section>
         <h3 className="font-display text-lg font-semibold text-sea-deep">Surveys</h3>
+        <p className="mt-1 text-sm text-ink-soft">
+          Create a survey, then open it to add validated scales or custom items.
+        </p>
         <ul className="mt-3 space-y-2">
           {surveys.map((survey) => (
             <li key={survey.id}>
@@ -144,7 +147,9 @@ export function StudyDetailPage() {
                 className="block rounded-2xl border border-sand/80 bg-white/60 px-4 py-3.5 transition hover:border-sea/30"
               >
                 <p className="font-semibold text-sea-deep">{survey.title}</p>
-                <p className="mt-0.5 text-xs text-ink-soft">Edit items · schedule</p>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  Open to add validated scales · custom items · reorder
+                </p>
               </Link>
             </li>
           ))}
@@ -162,7 +167,7 @@ export function StudyDetailPage() {
             type="submit"
             className="rounded-xl bg-sea px-4 py-2.5 text-sm font-semibold text-white"
           >
-            Add survey
+            Create survey
           </button>
         </form>
         <p className="mt-2 text-xs text-ink-soft">

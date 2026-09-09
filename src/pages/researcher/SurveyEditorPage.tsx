@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  VALIDATED_SCALES,
-  itemTextForLocale,
-} from '../../data/scales'
+  SurveyItemRow,
+  parseOptionsJson,
+  type ItemEditDraft,
+} from '../../components/researcher/SurveyItemRow'
+import { VALIDATED_SCALES } from '../../data/scales'
 import {
   addCustomItem,
   addValidatedScaleItems,
@@ -12,6 +14,8 @@ import {
   listItems,
   listOccasions,
   listPrompts,
+  moveItem,
+  updateItem,
 } from '../../lib/api'
 import type {
   ContentLocale,
@@ -30,11 +34,26 @@ const ITEM_TYPES: { value: ItemType; label: string }[] = [
 ]
 
 const defaultLikertOptions = [
-  { label: '전혀 동의하지 않는다', label_kr: '전혀 동의하지 않는다', label_en: 'Strongly disagree', value: 1 },
-  { label: '동의하지 않는다', label_kr: '동의하지 않는다', label_en: 'Disagree', value: 2 },
+  {
+    label: '전혀 동의하지 않는다',
+    label_kr: '전혀 동의하지 않는다',
+    label_en: 'Strongly disagree',
+    value: 1,
+  },
+  {
+    label: '동의하지 않는다',
+    label_kr: '동의하지 않는다',
+    label_en: 'Disagree',
+    value: 2,
+  },
   { label: '중립', label_kr: '중립', label_en: 'Neutral', value: 3 },
   { label: '동의한다', label_kr: '동의한다', label_en: 'Agree', value: 4 },
-  { label: '매우 동의한다', label_kr: '매우 동의한다', label_en: 'Strongly agree', value: 5 },
+  {
+    label: '매우 동의한다',
+    label_kr: '매우 동의한다',
+    label_en: 'Strongly agree',
+    value: 5,
+  },
 ]
 
 export function SurveyEditorPage() {
@@ -47,7 +66,6 @@ export function SurveyEditorPage() {
   const [locale, setLocale] = useState<ContentLocale>('ko')
   const [pickerQuery, setPickerQuery] = useState('')
 
-  // Custom item form
   const [itemText, setItemText] = useState('')
   const [itemTextEn, setItemTextEn] = useState('')
   const [variableName, setVariableName] = useState('')
@@ -100,12 +118,7 @@ export function SurveyEditorPage() {
     try {
       let response_options = null
       if (itemType !== 'open_text' && itemType !== 'visual_analog') {
-        response_options = JSON.parse(optionsJson) as {
-          label: string
-          label_kr?: string
-          label_en?: string
-          value: number
-        }[]
+        response_options = parseOptionsJson(optionsJson)
       }
 
       await addCustomItem({
@@ -152,6 +165,7 @@ export function SurveyEditorPage() {
 
   async function handleDelete(id: string) {
     setBusy(true)
+    setError(null)
     try {
       await deleteItem(id)
       await refresh()
@@ -160,6 +174,51 @@ export function SurveyEditorPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handleMove(id: string, direction: -1 | 1) {
+    setBusy(true)
+    setError(null)
+    try {
+      setItems(await moveItem(id, direction))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reorder item')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleSaveEdit(id: string, draft: ItemEditDraft) {
+    let response_options = null
+    if (draft.item_type !== 'open_text' && draft.item_type !== 'visual_analog') {
+      response_options = parseOptionsJson(draft.optionsJson)
+    }
+    await updateItem(id, {
+      item_type: draft.item_type,
+      item_text_kr: draft.item_text_kr.trim(),
+      item_text_en: draft.item_text_en.trim() || null,
+      item_text: draft.item_text_kr.trim(),
+      variable_name: draft.variable_name.trim(),
+      scale_name: draft.scale_name.trim() || null,
+      scale_name_kr: draft.scale_name.trim() || null,
+      scale_name_en: draft.scale_name.trim() || null,
+      position_in_scale: draft.position_in_scale
+        ? Number(draft.position_in_scale)
+        : null,
+      subscale: draft.subscale.trim() || null,
+      reverse_scored: draft.reverse_scored,
+      response_options,
+      left_anchor: response_options?.[0]?.label ?? null,
+      right_anchor: response_options?.at(-1)?.label ?? null,
+      left_anchor_kr: response_options?.[0]?.label_kr ?? response_options?.[0]?.label ?? null,
+      left_anchor_en: response_options?.[0]?.label_en ?? null,
+      right_anchor_kr:
+        response_options?.at(-1)?.label_kr ?? response_options?.at(-1)?.label ?? null,
+      right_anchor_en: response_options?.at(-1)?.label_en ?? null,
+      min_value: response_options?.[0]?.value ?? null,
+      max_value: response_options?.at(-1)?.value ?? null,
+    })
+    await refresh()
   }
 
   const filteredScales = VALIDATED_SCALES.filter((scale) => {
@@ -191,7 +250,8 @@ export function SurveyEditorPage() {
           {survey.title}
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          {items.length} items · {occasionCount} scheduled occasions
+          {items.length} items · {occasionCount} scheduled occasions · local demo
+          compatible
         </p>
         {survey.instructions && (
           <p className="mt-3 whitespace-pre-wrap rounded-xl border border-sand/70 bg-white/50 px-3 py-2 text-sm text-ink-soft">
@@ -206,15 +266,18 @@ export function SurveyEditorPage() {
         </p>
       )}
 
+      {/* (1) Add validated scale */}
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="font-display text-lg font-semibold text-sea-deep">
-              Choose from validated scales
+              Add validated scale
             </h3>
             <p className="mt-1 text-sm text-ink-soft">
-              Selecting a scale pre-fills all items (variable names, reverse
-              flags, subscales, bilingual text). Mix freely with custom items.
+              Pick one of the 8 instruments. All items are added with{' '}
+              <code className="font-mono text-xs">variable_name</code>, scale,
+              subscale, position, reverse flag, response options, and bilingual
+              text pre-filled.
             </p>
           </div>
           <label className="block text-sm">
@@ -222,7 +285,7 @@ export function SurveyEditorPage() {
             <input
               value={pickerQuery}
               onChange={(e) => setPickerQuery(e.target.value)}
-              placeholder="Search 8 scales…"
+              placeholder="Search scales…"
               className="w-48 rounded-xl border border-sand bg-white px-3 py-2 text-sm outline-none focus:border-sea/40"
             />
           </label>
@@ -230,9 +293,6 @@ export function SurveyEditorPage() {
 
         <ul className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
           {filteredScales.map((scale) => {
-            const reversePositions = scale.items
-              .filter((i) => i.reverseScored)
-              .map((i) => i.position)
             const alreadyAdded = items.some((i) => i.source_scale_id === scale.id)
             return (
               <li
@@ -244,21 +304,11 @@ export function SurveyEditorPage() {
                     <p className="font-semibold text-sea-deep">{scale.name_kr}</p>
                     <p className="mt-0.5 text-sm text-ink-soft">{scale.name_en}</p>
                     <p className="mt-2 text-xs text-ink-soft">
-                      <span className="font-mono">{scale.id}</span>
-                      {' · '}
                       {scale.items.length} items · {scale.responseScale.points}-point
-                      {' · '}
-                      reverse:{' '}
-                      {reversePositions.length > 0
-                        ? reversePositions.join(', ')
-                        : 'none'}
                     </p>
-                    <p className="mt-1 text-xs text-ink-soft/90">{scale.source}</p>
-                    {!scale.responseScale.verified && (
-                      <p className="mt-1 text-[11px] text-warn">
-                        Anchors unverified — confirm lab protocol before data collection.
-                      </p>
-                    )}
+                    <p className="mt-1 text-xs text-ink-soft/90">
+                      Source: {scale.source}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -266,7 +316,7 @@ export function SurveyEditorPage() {
                     onClick={() => void handleAddScale(scale.id)}
                     className="shrink-0 rounded-xl bg-sea px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-45"
                   >
-                    {alreadyAdded ? 'Added' : `Add ${scale.shortName}`}
+                    {alreadyAdded ? 'Already added' : 'Add scale'}
                   </button>
                 </div>
               </li>
@@ -275,15 +325,18 @@ export function SurveyEditorPage() {
         </ul>
       </section>
 
+      {/* (2) Add custom item */}
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5">
         <h3 className="font-display text-lg font-semibold text-sea-deep">
-          Create a custom item manually
+          Add custom item
         </h3>
+        <p className="mt-1 text-sm text-ink-soft">
+          Manually create a single item with the same export fields — for
+          variables that have no validated scale.
+        </p>
         <form onSubmit={handleAddCustom} className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block text-sm sm:col-span-2">
-            <span className="mb-1 block font-medium text-sea-deep">
-              Item text (Korean / default)
-            </span>
+            <span className="mb-1 block font-medium text-sea-deep">text_kr</span>
             <textarea
               value={itemText}
               onChange={(e) => setItemText(e.target.value)}
@@ -293,9 +346,7 @@ export function SurveyEditorPage() {
             />
           </label>
           <label className="block text-sm sm:col-span-2">
-            <span className="mb-1 block font-medium text-sea-deep">
-              Item text (English, optional)
-            </span>
+            <span className="mb-1 block font-medium text-sea-deep">text_en</span>
             <textarea
               value={itemTextEn}
               onChange={(e) => setItemTextEn(e.target.value)}
@@ -328,7 +379,7 @@ export function SurveyEditorPage() {
             </select>
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-sea-deep">scale_name</span>
+            <span className="mb-1 block font-medium text-sea-deep">scale</span>
             <input
               value={scaleName}
               onChange={(e) => setScaleName(e.target.value)}
@@ -356,7 +407,7 @@ export function SurveyEditorPage() {
               className="w-full rounded-xl border border-sand bg-white px-3 py-2 outline-none focus:border-sea/40"
             />
           </label>
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+          <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={reverseScored}
@@ -368,7 +419,7 @@ export function SurveyEditorPage() {
           {itemType !== 'open_text' && itemType !== 'visual_analog' && (
             <label className="block text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-sea-deep">
-                response_options (JSON: label / label_kr / label_en + value)
+                response_options (JSON)
               </span>
               <textarea
                 value={optionsJson}
@@ -390,9 +441,17 @@ export function SurveyEditorPage() {
         </form>
       </section>
 
+      {/* Editable / reorderable item list */}
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-display text-lg font-semibold text-sea-deep">Items</h3>
+          <div>
+            <h3 className="font-display text-lg font-semibold text-sea-deep">
+              Survey items
+            </h3>
+            <p className="mt-1 text-sm text-ink-soft">
+              Bilingual list — reorder with ↑↓, edit fields, or remove.
+            </p>
+          </div>
           <div
             className="inline-flex rounded-xl border border-sand bg-white/70 p-0.5 text-xs font-semibold"
             role="group"
@@ -423,68 +482,23 @@ export function SurveyEditorPage() {
 
         {items.length === 0 ? (
           <p className="mt-3 text-sm text-ink-soft">
-            No items yet. Choose a validated scale or add a custom item above.
+            No items yet. Add a validated scale or a custom item above.
           </p>
         ) : (
           <ol className="mt-3 space-y-2">
-            {items.map((item) => {
-              const primary = itemTextForLocale(item, locale)
-              const secondary =
-                locale === 'ko'
-                  ? item.item_text_en
-                  : item.item_text_kr || item.item_text
-              return (
-                <li
-                  key={item.id}
-                  className="rounded-2xl border border-sand/80 bg-white/60 px-4 py-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium leading-snug text-sea-deep">
-                        <span className="mr-2 text-ink-soft">{item.display_order}.</span>
-                        {primary}
-                      </p>
-                      {secondary && secondary !== primary && (
-                        <p className="mt-1 text-xs leading-snug text-ink-soft">
-                          {secondary}
-                        </p>
-                      )}
-                      <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-ink-soft">
-                        <span>{item.variable_name}</span>
-                        <span>{item.item_type}</span>
-                        {(locale === 'ko'
-                          ? item.scale_name_kr || item.scale_name
-                          : item.scale_name_en || item.scale_name) && (
-                          <span>
-                            {locale === 'ko'
-                              ? item.scale_name_kr || item.scale_name
-                              : item.scale_name_en || item.scale_name}
-                          </span>
-                        )}
-                        {item.position_in_scale != null && (
-                          <span>pos {item.position_in_scale}</span>
-                        )}
-                        {item.subscale && <span>{item.subscale}</span>}
-                        {item.reverse_scored && (
-                          <span className="font-sans font-semibold text-warn">
-                            reverse
-                          </span>
-                        )}
-                        <span className="font-sans">{item.source}</span>
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void handleDelete(item.id)}
-                      className="shrink-0 text-xs text-ink-soft hover:text-warn"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
+            {items.map((item, index) => (
+              <SurveyItemRow
+                key={item.id}
+                item={item}
+                index={index}
+                total={items.length}
+                locale={locale}
+                busy={busy}
+                onMove={(id, dir) => void handleMove(id, dir)}
+                onDelete={(id) => void handleDelete(id)}
+                onSave={handleSaveEdit}
+              />
+            ))}
           </ol>
         )}
       </section>

@@ -384,6 +384,132 @@ export async function deleteItem(itemId: string): Promise<void> {
   saveLocalDb(db)
 }
 
+export type SurveyItemPatch = Partial<
+  Pick<
+    SurveyItem,
+    | 'item_type'
+    | 'item_text'
+    | 'item_text_kr'
+    | 'item_text_en'
+    | 'variable_name'
+    | 'scale_name'
+    | 'scale_name_kr'
+    | 'scale_name_en'
+    | 'position_in_scale'
+    | 'subscale'
+    | 'reverse_scored'
+    | 'response_options'
+    | 'left_anchor'
+    | 'right_anchor'
+    | 'left_anchor_kr'
+    | 'left_anchor_en'
+    | 'right_anchor_kr'
+    | 'right_anchor_en'
+    | 'min_value'
+    | 'max_value'
+    | 'step_value'
+  >
+>
+
+export async function updateItem(
+  itemId: string,
+  patch: SurveyItemPatch,
+): Promise<SurveyItem> {
+  const nextPatch: SurveyItemPatch = { ...patch }
+  if (nextPatch.item_text_kr != null) {
+    nextPatch.item_text = nextPatch.item_text_kr
+  } else if (nextPatch.item_text != null && nextPatch.item_text_kr === undefined) {
+    nextPatch.item_text_kr = nextPatch.item_text
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('survey_items')
+      .update(nextPatch)
+      .eq('id', itemId)
+      .select()
+      .single()
+    if (error) throw error
+    return normalizeItem(data)
+  }
+
+  const db = getDb()
+  const idx = db.survey_items.findIndex((i) => i.id === itemId)
+  if (idx < 0) throw new Error('Item not found')
+  db.survey_items[idx] = { ...db.survey_items[idx], ...nextPatch }
+  saveLocalDb(db)
+  return db.survey_items[idx]
+}
+
+/** Move an item up (-1) or down (+1) within its survey; rewrites display_order. */
+export async function moveItem(
+  itemId: string,
+  direction: -1 | 1,
+): Promise<SurveyItem[]> {
+  const dbLocal = !isSupabaseConfigured
+  let items: SurveyItem[]
+
+  if (dbLocal) {
+    const db = getDb()
+    const target = db.survey_items.find((i) => i.id === itemId)
+    if (!target) throw new Error('Item not found')
+    items = db.survey_items
+      .filter((i) => i.survey_id === target.survey_id)
+      .sort((a, b) => a.display_order - b.display_order)
+  } else {
+    const { data: row, error } = await supabase!
+      .from('survey_items')
+      .select('*')
+      .eq('id', itemId)
+      .single()
+    if (error) throw error
+    items = await listItems(row.survey_id)
+  }
+
+  const index = items.findIndex((i) => i.id === itemId)
+  const swapWith = index + direction
+  if (index < 0 || swapWith < 0 || swapWith >= items.length) {
+    return items
+  }
+
+  const a = items[index]
+  const b = items[swapWith]
+  const orderA = a.display_order
+  const orderB = b.display_order
+
+  if (dbLocal) {
+    const db = getDb()
+    const ia = db.survey_items.findIndex((i) => i.id === a.id)
+    const ib = db.survey_items.findIndex((i) => i.id === b.id)
+    // Avoid unique(display_order) collisions in-memory by assigning temps then finals
+    db.survey_items[ia].display_order = -1
+    db.survey_items[ib].display_order = -2
+    db.survey_items[ia].display_order = orderB
+    db.survey_items[ib].display_order = orderA
+    saveLocalDb(db)
+    return listItems(a.survey_id)
+  }
+
+  // Supabase: unique (survey_id, display_order) — park one row first
+  const park = -(Math.abs(orderA) + Math.abs(orderB) + 1000)
+  const { error: e1 } = await supabase!
+    .from('survey_items')
+    .update({ display_order: park })
+    .eq('id', a.id)
+  if (e1) throw e1
+  const { error: e2 } = await supabase!
+    .from('survey_items')
+    .update({ display_order: orderA })
+    .eq('id', b.id)
+  if (e2) throw e2
+  const { error: e3 } = await supabase!
+    .from('survey_items')
+    .update({ display_order: orderB })
+    .eq('id', a.id)
+  if (e3) throw e3
+  return listItems(a.survey_id)
+}
+
 // ---- Participants ----
 
 export async function listParticipants(studyId: string): Promise<Participant[]> {
