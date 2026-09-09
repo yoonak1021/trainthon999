@@ -772,6 +772,16 @@ export async function createPromptWithOccasions(input: {
   schedule_summary?: string
   cadence?: string
   duration_days?: number
+  times_per_day?: number
+  delivery_times?: string[]
+  response_window_minutes?: number
+  starts_at?: string
+  generated_occasions?: Array<{
+    occasion_index: number
+    label: string
+    scheduled_for: string
+    window_closes_at?: string | null
+  }>
 }): Promise<{ prompt: Prompt; occasions: PromptOccasion[] }> {
   const ts = nowIso()
   const days = input.duration_days ?? 1
@@ -780,26 +790,47 @@ export async function createPromptWithOccasions(input: {
     survey_id: input.survey_id,
     label: input.label,
     schedule_summary: input.schedule_summary ?? null,
-    cadence: input.cadence ?? 'once',
+    cadence: input.cadence ?? 'daily_diary',
+    times_per_day: input.times_per_day ?? 1,
+    delivery_times: input.delivery_times ?? null,
+    response_window_minutes: input.response_window_minutes ?? 1440,
     duration_days: days,
-    starts_at: ts,
+    starts_at: input.starts_at ?? ts,
     ends_at: null,
     active: true,
     created_at: ts,
   }
 
-  const occasions: PromptOccasion[] = Array.from({ length: days }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() + i)
-    return {
+  let occasions: PromptOccasion[] = []
+
+  if (input.generated_occasions && input.generated_occasions.length > 0) {
+    occasions = input.generated_occasions.map((o) => ({
       id: newId(),
       prompt_id: prompt.id,
-      occasion_index: i + 1,
-      label: days === 1 ? 'Wave 1' : `Day ${i + 1}`,
-      scheduled_for: d.toISOString(),
+      occasion_index: o.occasion_index,
+      label: o.label,
+      scheduled_for: o.scheduled_for,
+      window_closes_at: o.window_closes_at ?? null,
       created_at: ts,
-    }
-  })
+    }))
+  } else {
+    // Default 1 occasion per day
+    occasions = Array.from({ length: days }, (_, i) => {
+      const d = new Date(input.starts_at ? new Date(input.starts_at) : new Date())
+      d.setDate(d.getDate() + i)
+      const close = new Date(d)
+      close.setMinutes(close.getMinutes() + (input.response_window_minutes ?? 1440))
+      return {
+        id: newId(),
+        prompt_id: prompt.id,
+        occasion_index: i + 1,
+        label: days === 1 ? 'Wave 1' : `Day ${i + 1}`,
+        scheduled_for: d.toISOString(),
+        window_closes_at: close.toISOString(),
+        created_at: ts,
+      }
+    })
+  }
 
   if (isSupabaseConfigured && supabase) {
     const { data: p, error: pe } = await supabase.from('prompts').insert(prompt).select().single()
@@ -817,6 +848,106 @@ export async function createPromptWithOccasions(input: {
   db.prompt_occasions.push(...occasions)
   saveLocalDb(db)
   return { prompt, occasions }
+}
+
+export async function updatePrompt(
+  promptId: string,
+  patch: Partial<Omit<Prompt, 'id' | 'survey_id' | 'created_at'>>,
+): Promise<Prompt> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('prompts')
+      .update(patch)
+      .eq('id', promptId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+  const db = getDb()
+  const idx = db.prompts.findIndex((p) => p.id === promptId)
+  if (idx < 0) throw new Error('Prompt not found')
+  db.prompts[idx] = { ...db.prompts[idx], ...patch }
+  saveLocalDb(db)
+  return db.prompts[idx]
+}
+
+export async function deletePrompt(promptId: string): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.from('prompts').delete().eq('id', promptId)
+    if (error) throw error
+    return
+  }
+  const db = getDb()
+  db.prompts = db.prompts.filter((p) => p.id !== promptId)
+  db.prompt_occasions = db.prompt_occasions.filter((o) => o.prompt_id !== promptId)
+  saveLocalDb(db)
+}
+
+export async function updatePromptOccasion(
+  occasionId: string,
+  patch: Partial<Omit<PromptOccasion, 'id' | 'prompt_id' | 'created_at'>>,
+): Promise<PromptOccasion> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('prompt_occasions')
+      .update(patch)
+      .eq('id', occasionId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+  const db = getDb()
+  const idx = db.prompt_occasions.findIndex((o) => o.id === occasionId)
+  if (idx < 0) throw new Error('Occasion not found')
+  db.prompt_occasions[idx] = { ...db.prompt_occasions[idx], ...patch }
+  saveLocalDb(db)
+  return db.prompt_occasions[idx]
+}
+
+export async function addPromptOccasion(
+  promptId: string,
+  input: {
+    label: string
+    scheduled_for: string
+    window_closes_at?: string | null
+  },
+): Promise<PromptOccasion> {
+  const occasions = await listOccasions(promptId)
+  const nextIndex = occasions.length > 0 ? Math.max(...occasions.map((o) => o.occasion_index)) + 1 : 1
+  const ts = nowIso()
+  const occasion: PromptOccasion = {
+    id: newId(),
+    prompt_id: promptId,
+    occasion_index: nextIndex,
+    label: input.label,
+    scheduled_for: input.scheduled_for,
+    window_closes_at: input.window_closes_at ?? null,
+    created_at: ts,
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.from('prompt_occasions').insert(occasion).select().single()
+    if (error) throw error
+    return data
+  }
+
+  const db = getDb()
+  db.prompt_occasions.push(occasion)
+  saveLocalDb(db)
+  return occasion
+}
+
+export async function deletePromptOccasion(occasionId: string): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.from('prompt_occasions').delete().eq('id', occasionId)
+    if (error) throw error
+    return
+  }
+  const db = getDb()
+  db.prompt_occasions = db.prompt_occasions.filter((o) => o.id !== occasionId)
+  saveLocalDb(db)
 }
 
 export async function getOccasion(id: string): Promise<PromptOccasion | null> {
@@ -869,6 +1000,28 @@ export async function resolveParticipationSession(args: {
   }
   if (!study || !participant) return null
 
+  // If specific occasionId is requested, look it up directly
+  if (args.occasionId) {
+    const targetOccasion = await getOccasion(args.occasionId)
+    if (targetOccasion) {
+      const targetPrompt = await getPrompt(targetOccasion.prompt_id)
+      if (targetPrompt) {
+        const targetSurvey = await getSurvey(targetPrompt.survey_id)
+        if (targetSurvey) {
+          const items = await listItems(targetSurvey.id)
+          return {
+            study,
+            participant,
+            survey: targetSurvey,
+            items,
+            prompt: targetPrompt,
+            occasion: targetOccasion,
+          }
+        }
+      }
+    }
+  }
+
   const surveys = await listSurveys(study.id)
   if (surveys.length === 0) return null
   const survey = surveys[0]
@@ -879,17 +1032,11 @@ export async function resolveParticipationSession(args: {
   const occasions = await listOccasions(prompt.id)
   if (occasions.length === 0) return null
 
-  let occasion = occasions[0]
-  if (args.occasionId) {
-    occasion = occasions.find((o) => o.id === args.occasionId) ?? occasion
-  } else {
-    // Prefer today's occasion if present; else first unanswered-friendly = first
-    const today = new Date().toDateString()
-    occasion =
-      occasions.find((o) =>
-        o.scheduled_for ? new Date(o.scheduled_for).toDateString() === today : false,
-      ) ?? occasions[0]
-  }
+  const today = new Date().toDateString()
+  const occasion =
+    occasions.find((o) =>
+      o.scheduled_for ? new Date(o.scheduled_for).toDateString() === today : false,
+    ) ?? occasions[0]
 
   return { study, participant, survey, items, prompt, occasion }
 }

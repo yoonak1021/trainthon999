@@ -11,6 +11,7 @@ import {
   getStudy,
 } from '../../lib/api'
 import { useLocale } from '../../context/LocaleContext'
+import { PromptScheduleManager } from '../../components/researcher/PromptScheduleManager'
 import type { Participant, Prompt, PromptOccasion, Study, Survey } from '../../types/database'
 
 export function StudyDetailPage() {
@@ -70,10 +71,12 @@ export function StudyDetailPage() {
       })
       await createPromptWithOccasions({
         survey_id: survey.id,
-        label: t('14일 일일 설문 (Daily 14 days)', 'Daily for 14 days'),
+        label: `${surveyTitle.trim()} - ${t('일일 다이어리 (14일)', 'Daily Diary (14 days)')}`,
         schedule_summary: 'daily for 14 days',
-        cadence: 'daily',
+        cadence: 'daily_diary',
         duration_days: 14,
+        delivery_times: ['21:00'],
+        response_window_minutes: 1440,
       })
       setSurveyTitle('')
       await refresh()
@@ -121,7 +124,8 @@ export function StudyDetailPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade">
+    <div className="space-y-8 animate-fade pb-16">
+      {/* Study Header */}
       <div>
         <Link to="/researcher" className="text-sm text-sea hover:underline">
           {t('← 연구 목록', '← Studies')}
@@ -148,6 +152,7 @@ export function StudyDetailPage() {
         </p>
       )}
 
+      {/* 1. Surveys in this Study */}
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5 shadow-sm">
         <h3 className="font-display text-lg font-semibold text-sea-deep">
           {t('설문지 목록 (Surveys)', 'Surveys')}
@@ -192,11 +197,9 @@ export function StudyDetailPage() {
             {t('설문지 만들기', 'Create survey')}
           </button>
         </form>
-        <p className="mt-2 text-xs text-ink-soft">
-          {t('새로 생성된 설문지에는 14일 일일 발송 스케줄이 기본 생성됩니다.', 'New surveys get a 14-day daily prompt schedule by default.')}
-        </p>
       </section>
 
+      {/* 2. Participants Management */}
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5 shadow-sm">
         <h3 className="font-display text-lg font-semibold text-sea-deep">
           {t('참가자 관리 (Participants)', 'Participants')}
@@ -245,26 +248,14 @@ export function StudyDetailPage() {
         </form>
       </section>
 
-      {promptInfo.length > 0 && (
-        <section className="rounded-2xl border border-sand/80 bg-white/55 p-5 shadow-sm">
-          <h3 className="font-display text-lg font-semibold text-sea-deep">
-            {t('발송 스케줄 (Prompt schedules)', 'Prompt schedules')}
-          </h3>
-          <ul className="mt-3 space-y-3">
-            {promptInfo.map(({ prompt, occasions }) => (
-              <li
-                key={prompt.id}
-                className="rounded-2xl border border-sand/80 bg-white/75 px-4 py-3 text-sm"
-              >
-                <p className="font-medium text-sea-deep">{prompt.label}</p>
-                <p className="mt-1 text-xs text-ink-soft">
-                  {prompt.schedule_summary ?? prompt.cadence} · {occasions.length} {t('회차', 'occasions')}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* 3. Rich Delivery Schedules & Waves Manager */}
+      <PromptScheduleManager
+        studyId={studyId}
+        surveys={surveys}
+        participants={participants}
+        promptInfo={promptInfo}
+        onRefresh={refresh}
+      />
     </div>
   )
 }

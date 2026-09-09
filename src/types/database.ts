@@ -83,12 +83,23 @@ export type SurveyItem = {
   created_at: string
 }
 
+export type PromptCadence =
+  | 'daily_diary'
+  | 'ema_momentary'
+  | 'weekly_wave'
+  | 'pre_post'
+  | 'custom'
+  | string
+
 export type Prompt = {
   id: string
   survey_id: string
   label: string
   schedule_summary: string | null
-  cadence: string | null
+  cadence: PromptCadence | null
+  times_per_day?: number | null
+  delivery_times?: string[] | null
+  response_window_minutes?: number | null
   duration_days: number | null
   starts_at: string | null
   ends_at: string | null
@@ -102,6 +113,7 @@ export type PromptOccasion = {
   occasion_index: number
   label: string | null
   scheduled_for: string | null
+  window_closes_at?: string | null
   created_at: string
 }
 

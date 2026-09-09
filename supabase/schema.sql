@@ -236,20 +236,23 @@ comment on column public.survey_items.item_text_en is
 -- prompt_occasions.
 -- ---------------------------------------------------------------------------
 create table public.prompts (
-  id                uuid primary key default gen_random_uuid(),
-  survey_id         uuid not null references public.surveys (id) on delete cascade,
-  -- Human label shown to researchers (e.g. "Daily diary — Week 1").
-  label             text not null,
+  id                      uuid primary key default gen_random_uuid(),
+  survey_id               uuid not null references public.surveys (id) on delete cascade,
+  -- Human label shown to researchers (e.g. "Daily diary — Week 1", "EMA 3x/day").
+  label                   text not null,
   -- Free-text schedule description for now (extensible to rrule later).
-  -- Examples: "daily for 14 days", "weekly on Monday for 8 weeks".
-  schedule_summary  text,
-  -- Structured cadence hints (optional; app may generate occasions from these).
-  cadence           text,          -- 'once' | 'daily' | 'weekly' | 'custom'
-  duration_days     integer,
-  starts_at         timestamptz,
-  ends_at           timestamptz,
-  active            boolean not null default true,
-  created_at        timestamptz not null default now()
+  -- Examples: "daily for 14 days", "weekly on Monday for 8 weeks", "3x daily EMA".
+  schedule_summary        text,
+  -- Structured cadence hints: 'daily_diary' | 'ema_momentary' | 'weekly_wave' | 'pre_post' | 'custom'
+  cadence                 text,
+  times_per_day           integer default 1,
+  delivery_times          jsonb,               -- e.g. ["09:00", "14:00", "20:00"]
+  response_window_minutes integer default 1440, -- e.g. 60 (1 hr EMA), 1440 (24 hrs)
+  duration_days           integer,
+  starts_at               timestamptz,
+  ends_at                 timestamptz,
+  active                  boolean not null default true,
+  created_at              timestamptz not null default now()
 );
 
 create index prompts_survey_id_idx on public.prompts (survey_id);
@@ -267,10 +270,12 @@ create table public.prompt_occasions (
   prompt_id         uuid not null references public.prompts (id) on delete cascade,
   -- 1-based index within the prompt (Day 1, Day 2, … Wave 3, …).
   occasion_index    integer not null,
-  -- Optional human label (e.g. "Day 3", "T2 — Post").
+  -- Optional human label (e.g. "Day 3", "T2 — Post", "Day 1 (09:00)").
   label             text,
   -- When this occasion was (or is) scheduled; used for adherence metrics.
   scheduled_for     timestamptz,
+  -- When the response window for this wave expires.
+  window_closes_at  timestamptz,
   created_at        timestamptz not null default now(),
 
   constraint prompt_occasions_prompt_index_unique unique (prompt_id, occasion_index)
