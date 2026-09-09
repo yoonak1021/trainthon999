@@ -1,33 +1,61 @@
-# Survey Scale Builder
+# Wave
 
-Client-side web app that turns validated psychological scales into a Qualtrics-importable survey.
-
-## Features
-
-- Search by scale name (e.g. `PSS-10`, `PHQ-9`) or plain-English constructs (e.g. “perceived stress”, “depression”)
-- Build an editable survey preview with items, Likert anchors, and reverse-scored flags
-- Export a downloadable `.txt` file in Qualtrics Advanced Format (Simple TXT)
-
-## Included scales (hardcoded for now)
-
-- **PSS-10** — Perceived Stress Scale (Cohen & Williamson, 1988)
-- **PHQ-9** — Patient Health Questionnaire-9 (Kroenke et al., 2001)
+Mobile-first longitudinal survey platform for psychology research — an alternative to Qualtrics / Google Forms focused on **repeated-measures** studies where the same participants answer over time.
 
 ## Stack
 
 - React + Vite + TypeScript
 - Tailwind CSS v4
+- React Router
+- Supabase (Postgres + Auth) — with a local demo store when env vars are unset
 
-## Develop
+## Features
+
+### Participant view
+- Enter via persistent participant code
+- One-item-at-a-time mobile flow with large touch targets, progress, and smooth transitions
+- Polished Likert controls; slider / VAS / open text supported
+- Responses saved per participant × item × prompt occasion
+
+### Researcher view
+- Create studies and surveys
+- Add items from a validated scale (**PSS-10** hardcoded) or as custom items with export fields (`variable_name`, `scale_name`, `position_in_scale`, `reverse_scored`, `subscale`)
+- View / CSV-export collected responses
+
+## Database
+
+Full proposed schema with comments: [`supabase/schema.sql`](supabase/schema.sql)
+
+Tables: `studies`, `participants`, `surveys`, `survey_items`, `prompts`, `prompt_occasions`, `responses` (+ `response_export` view).
+
+## Setup
 
 ```bash
 npm install
+cp .env.example .env   # fill VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+# Apply supabase/schema.sql in your Supabase SQL editor
 npm run dev
 ```
 
-## Build
+Without Supabase credentials the app runs in **local demo mode** (browser `localStorage`) with a seeded study and participant code `DEMO01`.
+
+## Scripts
 
 ```bash
+npm run dev
 npm run build
 npm run preview
+npm run lint
 ```
+
+## Routes
+
+| Path | Role |
+|------|------|
+| `/` | Landing |
+| `/p` | Participant code entry |
+| `/take/:code` | Survey session |
+| `/researcher` | Studies list |
+| `/researcher/studies/:id` | Study detail |
+| `/researcher/surveys/:id` | Survey item editor |
+| `/researcher/studies/:id/responses` | Response table + CSV |
