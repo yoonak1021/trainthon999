@@ -51,7 +51,6 @@ export type ItemEditDraft = {
   variable_name: string
   item_type: ItemType
   scale_name: string
-  position_in_scale: string
   subscale: string
   reverse_scored: boolean
   options: OptionDraft[]
@@ -66,8 +65,6 @@ export function draftFromItem(item: SurveyItem): ItemEditDraft {
     variable_name: item.variable_name,
     item_type: item.item_type,
     scale_name: item.scale_name || '',
-    position_in_scale:
-      item.position_in_scale == null ? '' : String(item.position_in_scale),
     subscale: item.subscale || '',
     reverse_scored: item.reverse_scored,
     options: optionsToDrafts(item.response_options),
@@ -89,7 +86,15 @@ type SurveyItemRowProps = {
   total: number
   locale: ContentLocale
   busy: boolean
-  onMove: (id: string, direction: -1 | 1) => void
+  isEditing?: boolean
+  onStartEdit?: () => void
+  onCancelEdit?: () => void
+  isDragging?: boolean
+  isDragOver?: boolean
+  onDragStart?: (e: React.DragEvent, index: number) => void
+  onDragOver?: (e: React.DragEvent, index: number) => void
+  onDragEnd?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent, index: number) => void
   onDelete: (id: string) => void
   onSave: (id: string, draft: ItemEditDraft) => Promise<void>
 }
@@ -97,19 +102,25 @@ type SurveyItemRowProps = {
 export function SurveyItemRow({
   item,
   index,
-  total,
   locale,
   busy,
-  onMove,
+  isEditing,
+  onStartEdit,
+  onCancelEdit,
+  isDragging = false,
+  isDragOver = false,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onDrop,
   onDelete,
   onSave,
 }: SurveyItemRowProps) {
-  const [editing, setEditing] = useState(false)
+  const [internalEditing, setInternalEditing] = useState(false)
+  const isCurrentlyEditing = isEditing !== undefined ? isEditing : internalEditing
+
   const [draft, setDraft] = useState<ItemEditDraft>(() => draftFromItem(item))
   const [saving, setSaving] = useState(false)
-  const [showAdvancedMeta, setShowAdvancedMeta] = useState(
-    Boolean(item.scale_name || item.subscale || item.position_in_scale || item.reverse_scored),
-  )
   const [localError, setLocalError] = useState<string | null>(null)
 
   const primary = itemTextForLocale(item, locale)
@@ -118,11 +129,20 @@ export function SurveyItemRow({
 
   function startEdit() {
     setDraft(draftFromItem(item))
-    setShowAdvancedMeta(
-      Boolean(item.scale_name || item.subscale || item.position_in_scale || item.reverse_scored),
-    )
     setLocalError(null)
-    setEditing(true)
+    if (onStartEdit) {
+      onStartEdit()
+    } else {
+      setInternalEditing(true)
+    }
+  }
+
+  function cancelEdit() {
+    if (onCancelEdit) {
+      onCancelEdit()
+    } else {
+      setInternalEditing(false)
+    }
   }
 
   async function handleSave(e: FormEvent) {
@@ -131,7 +151,8 @@ export function SurveyItemRow({
     setLocalError(null)
     try {
       await onSave(item.id, draft)
-      setEditing(false)
+      if (onCancelEdit) onCancelEdit()
+      else setInternalEditing(false)
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Could not save item')
     } finally {
@@ -139,33 +160,79 @@ export function SurveyItemRow({
     }
   }
 
-  if (editing) {
+  if (isCurrentlyEditing) {
     return (
-      <li className="rounded-2xl border-2 border-sea/30 bg-white p-5 shadow-sm">
+      <li className="rounded-2xl border-2 border-sea/40 bg-white p-5 shadow-md animate-fade">
         <form onSubmit={handleSave} className="space-y-5">
           <div className="flex items-center justify-between border-b border-sand/70 pb-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-sea">
-                Editing Item {item.display_order}
+                Editing Item #{item.display_order}
               </p>
               <h4 className="font-display text-base font-semibold text-sea-deep">
-                문항 세부 정보 수정
+                문항 정보 및 척도 설정 수정
               </h4>
             </div>
             <button
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={cancelEdit}
               className="text-xs font-medium text-ink-soft hover:text-sea-deep"
             >
               Cancel
             </button>
           </div>
 
-          {/* 1. Question Text */}
+          {/* 1. Research & Scale Metadata FIRST */}
+          <div className="rounded-xl border border-sand/80 bg-mist/25 p-3.5">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-sea-deep">
+              1. Scale & Scoring Metadata (척도 및 메타데이터)
+            </span>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium text-ink-soft">
+                  Scale Name (소속 척도명)
+                </span>
+                <input
+                  value={draft.scale_name}
+                  onChange={(e) => setDraft({ ...draft, scale_name: e.target.value })}
+                  placeholder="e.g. SWLS, Life Satisfaction"
+                  className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
+                />
+              </label>
+
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium text-ink-soft">
+                  Subscale / Factor (하위척도, Optional)
+                </span>
+                <input
+                  value={draft.subscale}
+                  onChange={(e) => setDraft({ ...draft, subscale: e.target.value })}
+                  placeholder="e.g. positive_affect"
+                  className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
+                />
+              </label>
+
+              <div className="sm:col-span-2 pt-1">
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-sea-deep cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draft.reverse_scored}
+                    onChange={(e) =>
+                      setDraft({ ...draft, reverse_scored: e.target.checked })
+                    }
+                    className="size-4 accent-sea rounded"
+                  />
+                  <span>Reverse scored item (역코딩 문항 — 채점 시 점수가 반전됨)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Question Text */}
           <div className="space-y-3">
             <label className="block text-sm">
               <span className="mb-1 block font-semibold text-sea-deep">
-                Question Text (Korean / 한국어 문항) <span className="text-warn">*</span>
+                2. Question Text (Korean / 한국어 문항 내용) <span className="text-warn">*</span>
               </span>
               <textarea
                 value={draft.item_text_kr}
@@ -191,7 +258,7 @@ export function SurveyItemRow({
             </label>
           </div>
 
-          {/* 2. Type & Variable Name */}
+          {/* 3. Type & Variable Name */}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-semibold text-sea-deep">
@@ -227,7 +294,7 @@ export function SurveyItemRow({
             </label>
           </div>
 
-          {/* 3. Response Options Editor */}
+          {/* 4. Response Options Editor */}
           <ResponseOptionsEditor
             itemType={draft.item_type}
             options={draft.options}
@@ -235,76 +302,6 @@ export function SurveyItemRow({
             continuousConfig={draft.continuousConfig}
             onContinuousConfigChange={(cfg) => setDraft({ ...draft, continuousConfig: cfg })}
           />
-
-          {/* 4. Research Metadata Collapsible */}
-          <div className="rounded-xl border border-sand/70 bg-mist/20 p-3.5">
-            <button
-              type="button"
-              onClick={() => setShowAdvancedMeta(!showAdvancedMeta)}
-              className="flex w-full items-center justify-between text-xs font-semibold text-sea-deep"
-            >
-              <span>Research & Scoring Metadata (연구용 척도 메타데이터 — 선택사항)</span>
-              <span>{showAdvancedMeta ? '▲ 접기' : '▼ 펼치기'}</span>
-            </button>
-
-            {showAdvancedMeta && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs">
-                  <span className="mb-1 block font-medium text-ink-soft">
-                    Scale Name (척도명)
-                  </span>
-                  <input
-                    value={draft.scale_name}
-                    onChange={(e) => setDraft({ ...draft, scale_name: e.target.value })}
-                    placeholder="e.g. SWLS, Life Satisfaction"
-                    className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
-                  />
-                </label>
-
-                <label className="block text-xs">
-                  <span className="mb-1 block font-medium text-ink-soft">
-                    Subscale / Factor (하위척도)
-                  </span>
-                  <input
-                    value={draft.subscale}
-                    onChange={(e) => setDraft({ ...draft, subscale: e.target.value })}
-                    placeholder="e.g. positive_affect"
-                    className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
-                  />
-                </label>
-
-                <label className="block text-xs">
-                  <span className="mb-1 block font-medium text-ink-soft">
-                    Position in Scale (문항 번호)
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={draft.position_in_scale}
-                    onChange={(e) =>
-                      setDraft({ ...draft, position_in_scale: e.target.value })
-                    }
-                    placeholder="e.g. 1"
-                    className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
-                  />
-                </label>
-
-                <div className="sm:col-span-3 flex items-center gap-2 pt-1">
-                  <label className="inline-flex items-center gap-2 text-xs font-medium text-sea-deep cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={draft.reverse_scored}
-                      onChange={(e) =>
-                        setDraft({ ...draft, reverse_scored: e.target.checked })
-                      }
-                      className="size-4 accent-sea rounded"
-                    />
-                    <span>Reverse scored item (역코딩 문항 — 채점 시 점수가 반전됨)</span>
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
 
           {localError && (
             <p role="alert" className="text-sm text-warn">
@@ -323,7 +320,7 @@ export function SurveyItemRow({
             <button
               type="button"
               disabled={saving}
-              onClick={() => setEditing(false)}
+              onClick={cancelEdit}
               className="rounded-xl border border-sand bg-white px-4 py-2.5 text-sm font-semibold text-sea-deep hover:bg-mist/40"
             >
               Cancel
@@ -335,61 +332,77 @@ export function SurveyItemRow({
   }
 
   return (
-    <li className="rounded-2xl border border-sand/80 bg-white/70 px-4 py-3.5 transition hover:border-sea/30 hover:bg-white">
+    <li
+      draggable={!busy && Boolean(onDragStart)}
+      onDragStart={onDragStart ? (e) => onDragStart(e, index) : undefined}
+      onDragOver={onDragOver ? (e) => onDragOver(e, index) : undefined}
+      onDragEnd={onDragEnd}
+      onDrop={onDrop ? (e) => onDrop(e, index) : undefined}
+      className={[
+        'group rounded-2xl border bg-white/75 p-4 transition select-none',
+        isDragging ? 'opacity-30 border-dashed border-sea bg-mist/50' : 'border-sand/80 hover:border-sea/40 hover:bg-white shadow-sm',
+        isDragOver ? 'border-t-4 border-t-sea bg-sea/5 scale-[1.01]' : '',
+      ].join(' ')}
+    >
       <div className="flex items-start gap-3">
-        <div className="flex shrink-0 flex-col gap-1 pt-0.5">
-          <button
-            type="button"
-            aria-label="Move up"
-            disabled={busy || index === 0}
-            onClick={() => onMove(item.id, -1)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-sand bg-white text-xs font-semibold text-sea-deep transition enabled:hover:border-sea/40 enabled:hover:bg-mist/50 disabled:opacity-30"
-            title="위로 이동"
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            aria-label="Move down"
-            disabled={busy || index === total - 1}
-            onClick={() => onMove(item.id, 1)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-sand bg-white text-xs font-semibold text-sea-deep transition enabled:hover:border-sea/40 enabled:hover:bg-mist/50 disabled:opacity-30"
-            title="아래로 이동"
-          >
-            ↓
-          </button>
+        {/* Drag Handle */}
+        <div
+          className="flex shrink-0 items-center justify-center pt-0.5 text-ink-soft/40 group-hover:text-sea cursor-grab active:cursor-grabbing p-1 hover:bg-mist rounded transition"
+          title="Drag up or down to reorder"
+        >
+          <svg width="14" height="18" viewBox="0 0 14 20" fill="currentColor">
+            <circle cx="4" cy="4" r="1.8" />
+            <circle cx="10" cy="4" r="1.8" />
+            <circle cx="4" cy="10" r="1.8" />
+            <circle cx="10" cy="10" r="1.8" />
+            <circle cx="4" cy="16" r="1.8" />
+            <circle cx="10" cy="16" r="1.8" />
+          </svg>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug text-sea-deep">
-            <span className="mr-2 text-ink-soft/80">{item.display_order}.</span>
-            {primary}
-          </p>
+          <div className="flex items-baseline gap-2">
+            <span className="font-semibold text-sea text-xs font-mono">
+              #{item.display_order}
+            </span>
+            <p className="text-sm font-semibold leading-snug text-sea-deep">
+              {primary}
+            </p>
+          </div>
+
           {secondary && secondary !== primary && (
-            <p className="mt-1 text-xs leading-snug text-ink-soft">{secondary}</p>
+            <p className="mt-1 text-xs leading-snug text-ink-soft pl-5">{secondary}</p>
           )}
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-ink-soft">
-            <span className="rounded bg-mist px-1.5 py-0.5 font-semibold text-sea-deep">
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[11px] text-ink-soft">
+            <span className="rounded bg-mist px-2 py-0.5 font-semibold text-sea-deep">
               {item.variable_name}
             </span>
-            <span className="font-sans capitalize text-ink-soft">{item.item_type.replace('_', ' ')}</span>
+            <span className="font-sans capitalize text-ink-soft">
+              {item.item_type.replace('_', ' ')}
+            </span>
             {(locale === 'ko'
               ? item.scale_name_kr || item.scale_name
               : item.scale_name_en || item.scale_name) && (
               <span className="font-sans text-ink-soft">
-                {locale === 'ko'
+                Scale: {locale === 'ko'
                   ? item.scale_name_kr || item.scale_name
                   : item.scale_name_en || item.scale_name}
               </span>
             )}
-            {item.position_in_scale != null && <span>pos {item.position_in_scale}</span>}
-            {item.subscale && <span>subscale: {item.subscale}</span>}
+            {item.subscale && (
+              <span className="font-sans text-ink-soft">
+                Subscale: {item.subscale}
+              </span>
+            )}
             {item.reverse_scored && (
-              <span className="rounded bg-warn-bg px-1.5 py-0.5 font-sans font-semibold text-warn">
+              <span className="rounded bg-warn-bg px-2 py-0.5 font-sans font-semibold text-warn">
                 Reverse Scored
               </span>
             )}
-            <span className="font-sans text-ink-soft/70">{item.source === 'validated_scale' ? 'Validated' : 'Custom'}</span>
+            <span className="font-sans text-ink-soft/70">
+              {item.source === 'validated_scale' ? 'Validated' : 'Custom'}
+            </span>
           </div>
         </div>
 

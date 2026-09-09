@@ -296,6 +296,84 @@ export async function addValidatedScaleItems(
   return listItems(surveyId)
 }
 
+export type CustomScaleItemInput = {
+  item_text_kr: string
+  item_text_en?: string | null
+  variable_name: string
+  reverse_scored?: boolean
+}
+
+export type AddCustomScaleInput = {
+  survey_id: string
+  scale_name?: string | null
+  subscale?: string | null
+  item_type: ItemType
+  response_options?: ResponseOption[] | null
+  left_anchor?: string | null
+  right_anchor?: string | null
+  left_anchor_kr?: string | null
+  left_anchor_en?: string | null
+  right_anchor_kr?: string | null
+  right_anchor_en?: string | null
+  min_value?: number | null
+  max_value?: number | null
+  step_value?: number | null
+  items: CustomScaleItemInput[]
+}
+
+export async function addCustomScaleWithItems(
+  input: AddCustomScaleInput,
+): Promise<SurveyItem[]> {
+  const existing = await listItems(input.survey_id)
+  const startOrder = existing.length + 1
+  const ts = nowIso()
+
+  const newItems: SurveyItem[] = input.items.map((it, idx) => {
+    const textKr = it.item_text_kr.trim()
+    const textEn = it.item_text_en?.trim() || null
+    return {
+      id: newId(),
+      survey_id: input.survey_id,
+      item_type: input.item_type,
+      item_text: textKr,
+      item_text_kr: textKr,
+      item_text_en: textEn,
+      display_order: startOrder + idx,
+      response_options: input.response_options ?? null,
+      min_value: input.min_value ?? null,
+      max_value: input.max_value ?? null,
+      step_value: input.step_value ?? null,
+      left_anchor: input.left_anchor ?? null,
+      right_anchor: input.right_anchor ?? null,
+      left_anchor_kr: input.left_anchor_kr ?? input.left_anchor ?? null,
+      left_anchor_en: input.left_anchor_en ?? null,
+      right_anchor_kr: input.right_anchor_kr ?? input.right_anchor ?? null,
+      right_anchor_en: input.right_anchor_en ?? null,
+      variable_name: it.variable_name.trim(),
+      scale_name: input.scale_name?.trim() || null,
+      scale_name_kr: input.scale_name?.trim() || null,
+      scale_name_en: input.scale_name?.trim() || null,
+      position_in_scale: idx + 1,
+      reverse_scored: it.reverse_scored ?? false,
+      subscale: input.subscale?.trim() || null,
+      source: 'custom' as const,
+      source_scale_id: null,
+      created_at: ts,
+    }
+  })
+
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.from('survey_items').insert(newItems).select()
+    if (error) throw error
+    return listItems(input.survey_id)
+  }
+
+  const db = getDb()
+  db.survey_items.push(...newItems)
+  saveLocalDb(db)
+  return listItems(input.survey_id)
+}
+
 export async function addCustomItem(input: {
   survey_id: string
   item_type: ItemType
@@ -512,6 +590,43 @@ export async function moveItem(
     .eq('id', a.id)
   if (e3) throw e3
   return listItems(a.survey_id)
+}
+
+/** Reorder items by providing the full array of item IDs in desired order. */
+export async function reorderItems(
+  surveyId: string,
+  orderedItemIds: string[],
+): Promise<SurveyItem[]> {
+  const dbLocal = !isSupabaseConfigured
+  if (dbLocal) {
+    const db = getDb()
+    const itemMap = new Map(db.survey_items.map((it) => [it.id, it]))
+    orderedItemIds.forEach((id, idx) => {
+      const it = itemMap.get(id)
+      if (it && it.survey_id === surveyId) {
+        it.display_order = idx + 1
+      }
+    })
+    saveLocalDb(db)
+    return listItems(surveyId)
+  }
+
+  // Supabase: park items to avoid unique constraint violations
+  for (let i = 0; i < orderedItemIds.length; i++) {
+    const id = orderedItemIds[i]
+    await supabase!
+      .from('survey_items')
+      .update({ display_order: -(i + 1000) })
+      .eq('id', id)
+  }
+  for (let i = 0; i < orderedItemIds.length; i++) {
+    const id = orderedItemIds[i]
+    await supabase!
+      .from('survey_items')
+      .update({ display_order: i + 1 })
+      .eq('id', id)
+  }
+  return listItems(surveyId)
 }
 
 // ---- Participants ----
