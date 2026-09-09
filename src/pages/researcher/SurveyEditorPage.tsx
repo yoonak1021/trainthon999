@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ITEM_TYPES,
@@ -14,6 +14,7 @@ import {
   PRESET_OPTIONS,
 } from '../../components/researcher/ResponseOptionsEditor'
 import { VALIDATED_SCALES } from '../../data/scales'
+import { useLocale } from '../../context/LocaleContext'
 import {
   addCustomScaleWithItems,
   addValidatedScaleItems,
@@ -26,7 +27,6 @@ import {
   updateItem,
 } from '../../lib/api'
 import type {
-  ContentLocale,
   ItemType,
   ResponseOption,
   Survey,
@@ -41,7 +41,7 @@ type CustomQuestionDraft = {
   reverse_scored: boolean
 }
 
-function createInitialQuestion(varPrefix = 'custom'): CustomQuestionDraft {
+function createInitialQuestion(varPrefix = 'item'): CustomQuestionDraft {
   return {
     id: crypto.randomUUID(),
     text_kr: '',
@@ -53,14 +53,17 @@ function createInitialQuestion(varPrefix = 'custom'): CustomQuestionDraft {
 
 export function SurveyEditorPage() {
   const { surveyId = '' } = useParams()
+  const { t, locale, setLocale } = useLocale()
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [items, setItems] = useState<SurveyItem[]>([])
   const [occasionCount, setOccasionCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [locale, setLocale] = useState<ContentLocale>('ko')
   const [viewMode, setViewMode] = useState<'detailed' | 'condensed'>('detailed')
   const [pickerQuery, setPickerQuery] = useState('')
+
+  // State to track expanded APA citation dropdowns per scale ID
+  const [expandedCitations, setExpandedCitations] = useState<Record<string, boolean>>({})
 
   // Drag-and-drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -99,13 +102,24 @@ export function SurveyEditorPage() {
       }
       setOccasionCount(count)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load survey')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('설문지 정보를 불러오지 못했습니다.', 'Failed to load survey'),
+      )
     }
   }
 
   useEffect(() => {
     void refresh()
   }, [surveyId])
+
+  function toggleCitation(scaleId: string) {
+    setExpandedCitations((prev) => ({
+      ...prev,
+      [scaleId]: !prev[scaleId],
+    }))
+  }
 
   async function handleAddScale(scaleId: string) {
     setBusy(true)
@@ -114,7 +128,11 @@ export function SurveyEditorPage() {
       await addValidatedScaleItems(surveyId, scaleId)
       await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add scale')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('척도를 추가하지 못했습니다.', 'Could not add scale'),
+      )
     } finally {
       setBusy(false)
     }
@@ -153,10 +171,14 @@ export function SurveyEditorPage() {
     setBusy(true)
     setError(null)
     try {
-      // Validate at least one question has text
       const validQuestions = questions.filter((q) => q.text_kr.trim().length > 0)
       if (validQuestions.length === 0) {
-        throw new Error('Please enter at least one question text (한국어 문항 내용).')
+        throw new Error(
+          t(
+            '최소 한 개 이상의 문항 내용을 입력해 주세요 (한국어 문항 내용).',
+            'Please enter at least one question text (Korean question text).',
+          ),
+        )
       }
 
       let response_options: ResponseOption[] | null = null
@@ -227,7 +249,11 @@ export function SurveyEditorPage() {
       setOptions(PRESET_OPTIONS[0].options.map((o) => ({ ...o })))
       await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add custom scale/items')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('커스텀 척도 및 문항을 추가하지 못했습니다.', 'Could not add custom scale/items'),
+      )
     } finally {
       setBusy(false)
     }
@@ -241,7 +267,11 @@ export function SurveyEditorPage() {
       if (editingItemId === id) setEditingItemId(null)
       await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete item')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('문항을 삭제하지 못했습니다.', 'Could not delete item'),
+      )
     } finally {
       setBusy(false)
     }
@@ -251,7 +281,6 @@ export function SurveyEditorPage() {
   function handleDragStart(e: React.DragEvent, index: number) {
     setDraggedIndex(index)
     e.dataTransfer.effectAllowed = 'move'
-    // set drag image / data
     e.dataTransfer.setData('text/plain', String(index))
   }
 
@@ -280,19 +309,21 @@ export function SurveyEditorPage() {
     const [moved] = reordered.splice(draggedIndex, 1)
     reordered.splice(targetIndex, 0, moved)
 
-    // Update display order locally for zero-latency UI
     const updated = reordered.map((it, idx) => ({ ...it, display_order: idx + 1 }))
     setItems(updated)
     setDraggedIndex(null)
     setDragOverIndex(null)
 
-    // Persist reordered array
     setBusy(true)
     try {
       const persisted = await reorderItems(surveyId, updated.map((i) => i.id))
       setItems(persisted)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not reorder items')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('문항 순서를 변경하지 못했습니다.', 'Could not reorder items'),
+      )
       await refresh()
     } finally {
       setBusy(false)
@@ -364,20 +395,83 @@ export function SurveyEditorPage() {
     await refresh()
   }
 
-  const filteredScales = VALIDATED_SCALES.filter((scale) => {
+  // Enhanced search filter across author, scale name, and keywords
+  const filteredScales = useMemo(() => {
     const q = pickerQuery.trim().toLowerCase()
-    if (!q) return true
-    return (
-      scale.id.toLowerCase().includes(q) ||
-      scale.shortName.toLowerCase().includes(q) ||
-      scale.name_en.toLowerCase().includes(q) ||
-      scale.name_kr.includes(pickerQuery.trim()) ||
-      scale.source.toLowerCase().includes(q)
-    )
-  })
+    if (!q) return VALIDATED_SCALES
+    return VALIDATED_SCALES.filter((scale) => {
+      const matchId = scale.id.toLowerCase().includes(q)
+      const matchShort = scale.shortName.toLowerCase().includes(q)
+      const matchNameEn = scale.name_en.toLowerCase().includes(q)
+      const matchNameKr = scale.name_kr.toLowerCase().includes(q)
+      const matchSource = scale.source.toLowerCase().includes(q)
+      const matchCitation = scale.citation.toLowerCase().includes(q)
+      const matchKeywords = scale.keywords?.some((k) => k.toLowerCase().includes(q))
+      return (
+        matchId ||
+        matchShort ||
+        matchNameEn ||
+        matchNameKr ||
+        matchSource ||
+        matchCitation ||
+        matchKeywords
+      )
+    })
+  }, [pickerQuery])
+
+  // Compute scale overview summary for this survey
+  const scaleOverview = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        scaleKey: string
+        displayName: string
+        itemCount: number
+        itemType: string
+        subscales: Set<string>
+        variableNames: string[]
+        hasReverse: boolean
+        isCustom: boolean
+      }
+    >()
+
+    items.forEach((item) => {
+      const scaleKey = item.scale_name || item.source_scale_id || (locale === 'ko' ? '기타 문항' : 'Custom Items')
+      const isCustom = item.source !== 'validated_scale'
+
+      let entry = map.get(scaleKey)
+      if (!entry) {
+        let displayName = scaleKey
+        if (item.source_scale_id) {
+          const matched = VALIDATED_SCALES.find((s) => s.id === item.source_scale_id)
+          if (matched) {
+            displayName = locale === 'ko' ? matched.name_kr : matched.name_en
+          }
+        }
+        entry = {
+          scaleKey,
+          displayName,
+          itemCount: 0,
+          itemType: item.item_type,
+          subscales: new Set(),
+          variableNames: [],
+          hasReverse: false,
+          isCustom,
+        }
+        map.set(scaleKey, entry)
+      }
+
+      entry.itemCount += 1
+      if (item.subscale) entry.subscales.add(item.subscale)
+      entry.variableNames.push(item.variable_name)
+      if (item.reverse_scored) entry.hasReverse = true
+    })
+
+    return Array.from(map.values())
+  }, [items, locale])
 
   if (!survey) {
-    return <p className="text-sm text-ink-soft">Loading survey…</p>
+    return <p className="text-sm text-ink-soft">{t('설문지를 불러오는 중…', 'Loading survey…')}</p>
   }
 
   return (
@@ -388,13 +482,13 @@ export function SurveyEditorPage() {
           to={`/researcher/studies/${survey.study_id}`}
           className="text-sm text-sea hover:underline"
         >
-          ← Study
+          {t('← 연구 화면으로', '← Study')}
         </Link>
         <h2 className="mt-2 font-display text-2xl font-semibold text-sea-deep">
           {survey.title}
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          {items.length} items · {occasionCount} scheduled occasions · local demo compatible
+          {items.length} {t('개 문항', 'items')} · {occasionCount} {t('회차 발송 스케줄', 'scheduled occasions')} · {t('로컬 데모 모드 호환', 'local demo compatible')}
         </p>
         {survey.instructions && (
           <p className="mt-3 whitespace-pre-wrap rounded-xl border border-sand/70 bg-white/50 px-3.5 py-2.5 text-sm text-ink-soft">
@@ -409,71 +503,184 @@ export function SurveyEditorPage() {
         </p>
       )}
 
+      {/* NEW: Overview of Scales Added to the Survey */}
+      {items.length > 0 && (
+        <section className="rounded-2xl border border-sand/80 bg-white/60 p-5 shadow-sm space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sand/60 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sea/20 text-sea font-bold text-xs">
+                ✓
+              </span>
+              <h3 className="font-display text-base font-semibold text-sea-deep">
+                {t('설문에 포함된 척도 개요 (Scales in this survey)', 'Overview of Scales in this Survey')}
+              </h3>
+            </div>
+            <span className="text-xs font-semibold text-ink-soft">
+              {scaleOverview.length} {t('개 척도 영역', 'scale domain(s)')} · {items.length} {t('문항 총계', 'total questions')}
+            </span>
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 pt-1">
+            {scaleOverview.map((scale, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-sand/70 bg-white p-3.5 shadow-2xs space-y-1.5 transition hover:border-sea/40"
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <p className="font-semibold text-xs text-sea-deep line-clamp-1">
+                    {scale.displayName}
+                  </p>
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                      scale.isCustom
+                        ? 'bg-mist text-sea-deep'
+                        : 'bg-sea/10 text-sea'
+                    }`}
+                  >
+                    {scale.isCustom ? t('커스텀', 'Custom') : t('검증 척도', 'Validated')}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-soft">
+                  <span className="font-medium text-sea-deep">
+                    {scale.itemCount} {t('문항', 'items')}
+                  </span>
+                  <span>·</span>
+                  <span className="capitalize">{scale.itemType.replace('_', ' ')}</span>
+                  {scale.hasReverse && (
+                    <>
+                      <span>·</span>
+                      <span className="text-warn font-semibold">{t('역코딩 포함', 'Reverse scored')}</span>
+                    </>
+                  )}
+                </div>
+
+                {scale.subscales.size > 0 && (
+                  <p className="text-[10px] text-ink-soft/80 truncate">
+                    {t('하위요인', 'Subscales')}: {Array.from(scale.subscales).join(', ')}
+                  </p>
+                )}
+
+                <p className="font-mono text-[10px] text-ink-soft/70 truncate pt-0.5">
+                  {scale.variableNames.slice(0, 3).join(', ')}
+                  {scale.variableNames.length > 3 ? ` … (+${scale.variableNames.length - 3})` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* (1) Add validated scale */}
-      <section className="rounded-2xl border border-sand/80 bg-white/55 p-5 shadow-sm">
+      <section className="rounded-2xl border border-sand/80 bg-white/55 p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="font-display text-lg font-semibold text-sea-deep">
-              Add validated scale (검증된 심리학 척도 추가)
+              {t('검증된 심리학 척도 추가 (Add validated scale)', 'Add validated scale')}
             </h3>
             <p className="mt-1 text-sm text-ink-soft">
-              Pick one of the 8 instruments. All items are added with variable names,
-              subscales, reverse-scoring flags, response options, and bilingual text pre-filled.
+              {t(
+                '심리학 검증 척도 8종 중 선택. 척도명, 연구 저자(Author), 관련 키워드로 검색할 수 있습니다.',
+                'Choose from 8 validated instruments. Search by scale name, author, or construct keywords.',
+              )}
             </p>
           </div>
           <label className="block text-sm">
-            <span className="sr-only">Search scales</span>
+            <span className="sr-only">{t('척도 검색', 'Search scales')}</span>
             <input
               value={pickerQuery}
               onChange={(e) => setPickerQuery(e.target.value)}
-              placeholder="Search scales…"
-              className="w-48 rounded-xl border border-sand bg-white px-3 py-2 text-sm outline-none focus:border-sea/40"
+              placeholder={t('척도명, 저자, 키워드 검색…', 'Search author, scale, keyword…')}
+              className="w-64 rounded-xl border border-sand bg-white px-3.5 py-2 text-xs outline-none transition focus:border-sea/50 focus:ring-4 focus:ring-sea/10"
             />
           </label>
         </div>
 
-        <ul className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
-          {filteredScales.map((scale) => {
-            const alreadyAdded = items.some((i) => i.source_scale_id === scale.id)
-            return (
-              <li
-                key={scale.id}
-                className="rounded-xl border border-sand/70 bg-white/70 p-4 transition hover:border-sea/30"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sea-deep">{scale.name_kr}</p>
-                    <p className="mt-0.5 text-sm text-ink-soft">{scale.name_en}</p>
-                    <p className="mt-2 text-xs text-ink-soft">
-                      {scale.items.length} items · {scale.responseScale.points}-point scale
-                    </p>
-                    <p className="mt-1 text-xs text-ink-soft/90">
-                      Source: {scale.source}
-                    </p>
+        <ul className="max-h-[30rem] space-y-3 overflow-y-auto pr-1">
+          {filteredScales.length === 0 ? (
+            <li className="p-8 text-center rounded-xl border border-dashed border-sand bg-white/60 text-xs text-ink-soft">
+              {t('검색 조건과 일치하는 척도가 없습니다.', 'No matching validated scales found.')}
+            </li>
+          ) : (
+            filteredScales.map((scale) => {
+              const alreadyAdded = items.some((i) => i.source_scale_id === scale.id)
+              const isCitationOpen = Boolean(expandedCitations[scale.id])
+
+              return (
+                <li
+                  key={scale.id}
+                  className="rounded-xl border border-sand/70 bg-white/80 p-4 transition hover:border-sea/40 shadow-2xs space-y-3"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm text-sea-deep">
+                        {scale.name_kr}
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-soft">
+                        {scale.name_en}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+                        <span className="rounded bg-mist px-2 py-0.5 font-semibold text-sea-deep text-[11px]">
+                          {scale.items.length} {t('문항', 'items')} · {scale.responseScale.points}{t('점 척도', '-point scale')}
+                        </span>
+                        <span className="text-xs text-ink-soft/90">
+                          {t('출처/저자', 'Source')}: <span className="font-medium text-sea-deep">{scale.source}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={busy || alreadyAdded}
+                        onClick={() => void handleAddScale(scale.id)}
+                        className="rounded-xl bg-sea px-4 py-2 text-xs font-semibold text-white transition hover:bg-sea-bright disabled:opacity-45 shadow-xs"
+                      >
+                        {alreadyAdded ? t('추가됨', 'Already added') : t('척도 추가', 'Add scale')}
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={busy || alreadyAdded}
-                    onClick={() => void handleAddScale(scale.id)}
-                    className="shrink-0 rounded-xl bg-sea px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sea-bright disabled:opacity-45"
-                  >
-                    {alreadyAdded ? 'Already added' : 'Add scale'}
-                  </button>
-                </div>
-              </li>
-            )
-          })}
+
+                  {/* APA Citation Toggle Dropdown */}
+                  <div className="border-t border-sand/50 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleCitation(scale.id)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-sea hover:text-sea-bright transition underline-offset-2 hover:underline"
+                    >
+                      <span>{isCitationOpen ? '▲' : '▼'}</span>
+                      <span>show apa citation</span>
+                    </button>
+
+                    {isCitationOpen && (
+                      <div className="mt-2 rounded-lg border border-sand/60 bg-mist/30 p-3 text-xs text-ink-soft animate-fade leading-relaxed">
+                        <p className="font-semibold text-sea-deep text-[11px] uppercase tracking-wider mb-1">
+                          APA 7th Edition Citation
+                        </p>
+                        <p className="font-sans italic select-all">
+                          {scale.citation}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              )
+            })
+          )}
         </ul>
       </section>
 
-      {/* (2) Custom Scale & Items Builder */}
+      {/* (2) Custom Scale & Items Builder: Questions in this Scale is STEP 2 */}
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5 shadow-sm">
         <div>
           <h3 className="font-display text-lg font-semibold text-sea-deep">
-            Add custom scale & items (직접 척도 및 문항 추가)
+            {t('직접 척도 및 문항 추가 (Add custom scale & items)', 'Add custom scale & items')}
           </h3>
           <p className="mt-1 text-sm text-ink-soft">
-            Define a custom scale and response options once, then add one or multiple question items below. Response options will be shared across all items in this scale.
+            {t(
+              '커스텀 척도명을 지정하고, 척도에 속할 여러 문항을 한 번에 작성한 뒤 공통 응답 선택지를 적용할 수 있습니다.',
+              'Define a custom scale and name it first, then add multiple questions under it with shared response options.',
+            )}
           </p>
         </div>
 
@@ -485,99 +692,63 @@ export function SurveyEditorPage() {
                 1
               </span>
               <h4 className="text-sm font-semibold text-sea-deep">
-                Scale & Metadata (소속 척도 정보 설정)
+                {t('소속 척도 정보 설정 (Scale & Metadata)', 'Scale & Metadata')}
               </h4>
             </div>
             <p className="text-xs text-ink-soft pl-7">
-              Group these questions under a custom scale name (e.g. Daily Wellbeing, Stress Tracker).
+              {t(
+                '문항들을 묶을 척도명 또는 설문 영역명을 입력하세요 (예: Daily Wellbeing, 일일 웰빙 척도).',
+                'Group these questions under a custom scale name (e.g. Daily Wellbeing, Stress Tracker).',
+              )}
             </p>
 
             <div className="grid gap-3 sm:grid-cols-2 pt-1 pl-7">
               <label className="block text-xs">
                 <span className="mb-1 block font-semibold text-sea-deep">
-                  Scale Name (소속 척도명 / 설문 영역명)
+                  {t('척도명 (Scale Name)', 'Scale Name')}
                 </span>
                 <input
                   value={scaleName}
                   onChange={(e) => setScaleName(e.target.value)}
-                  placeholder="예: Daily Wellbeing, 일일 웰빙 척도"
+                  placeholder={t('예: 일일 웰빙 척도 / Daily Wellbeing', 'e.g. Daily Wellbeing')}
                   className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none transition focus:border-sea/50 focus:ring-4 focus:ring-sea/10"
                 />
               </label>
 
               <label className="block text-xs">
                 <span className="mb-1 block font-semibold text-sea-deep">
-                  Subscale / Factor (하위척도, Optional)
+                  {t('하위척도 (Subscale / Factor, Optional)', 'Subscale / Factor (Optional)')}
                 </span>
                 <input
                   value={subscale}
                   onChange={(e) => setSubscale(e.target.value)}
-                  placeholder="예: positive_affect, mood"
+                  placeholder={t('예: positive_affect, mood', 'e.g. positive_affect')}
                   className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none transition focus:border-sea/50 focus:ring-4 focus:ring-sea/10"
                 />
               </label>
             </div>
           </div>
 
-          {/* STEP 2: Shared Response Format & Options */}
-          <div className="rounded-xl border border-sand/80 bg-white/75 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sea text-white text-[11px] font-bold">
-                2
-              </span>
-              <h4 className="text-sm font-semibold text-sea-deep">
-                Shared Response Format (공통 응답 유형 및 선택지 설정)
-              </h4>
-            </div>
-            <p className="text-xs text-ink-soft pl-7">
-              All question items created in this section will share this response scale and options.
-            </p>
-
-            <div className="pl-7 space-y-4">
-              <label className="block text-xs max-w-sm">
-                <span className="mb-1 block font-semibold text-sea-deep">
-                  Question Type (응답 유형) <span className="text-warn">*</span>
-                </span>
-                <select
-                  value={itemType}
-                  onChange={(e) => setItemType(e.target.value as ItemType)}
-                  className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none transition focus:border-sea/50 focus:ring-4 focus:ring-sea/10"
-                >
-                  {ITEM_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <ResponseOptionsEditor
-                itemType={itemType}
-                options={options}
-                onOptionsChange={setOptions}
-                continuousConfig={continuousConfig}
-                onContinuousConfigChange={setContinuousConfig}
-              />
-            </div>
-          </div>
-
-          {/* STEP 3: Questions in this Scale */}
+          {/* STEP 2: Questions in this Scale (NOW STEP 2!) */}
           <div className="rounded-xl border border-sand/80 bg-white/75 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sea text-white text-[11px] font-bold">
-                  3
+                  2
                 </span>
                 <h4 className="text-sm font-semibold text-sea-deep">
-                  Questions in this Scale (척도에 포함될 문항 목록)
+                  {t('척도에 포함될 문항 목록 (Questions in this scale)', 'Questions in this scale')}
                 </h4>
               </div>
               <span className="text-xs text-ink-soft font-medium">
-                {questions.length} question{questions.length === 1 ? '' : 's'}
+                {questions.length} {t('개 문항 작성 중', 'question(s)')}
               </span>
             </div>
             <p className="text-xs text-ink-soft pl-7">
-              Add one or more questions. Each question gets its own variable name for CSV data exports.
+              {t(
+                '이 척도에 포함될 문항을 한 개 이상 입력하세요. 각 문항마다 고유 변수명(CSV 열 이름)이 자동 생성됩니다.',
+                'Add one or more questions under this scale. Each question gets its own variable name for CSV exports.',
+              )}
             </p>
 
             <div className="pl-7 space-y-3">
@@ -588,7 +759,7 @@ export function SurveyEditorPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-sea">
-                      Question #{idx + 1}
+                      {t('문항', 'Question')} #{idx + 1}
                     </span>
                     {questions.length > 1 && (
                       <button
@@ -596,7 +767,7 @@ export function SurveyEditorPage() {
                         onClick={() => removeQuestionRow(idx)}
                         className="text-xs text-ink-soft hover:text-warn transition"
                       >
-                        Remove question
+                        {t('문항 삭제', 'Remove question')}
                       </button>
                     )}
                   </div>
@@ -604,34 +775,34 @@ export function SurveyEditorPage() {
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     <label className="block text-xs sm:col-span-2">
                       <span className="mb-1 block font-medium text-sea-deep">
-                        Question Text (Korean / 한국어 문항) <span className="text-warn">*</span>
+                        {t('한국어 문항 내용 (Korean Text)', 'Question Text (Korean)')} <span className="text-warn">*</span>
                       </span>
                       <input
                         type="text"
                         value={q.text_kr}
                         onChange={(e) => updateQuestionRow(idx, { text_kr: e.target.value })}
                         required
-                        placeholder="예: 오늘 하루 나는 즐겁고 행복했다."
+                        placeholder={t('예: 오늘 하루 나는 즐겁고 행복했다.', 'e.g. I felt happy today.')}
                         className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
                       />
                     </label>
 
                     <label className="block text-xs">
                       <span className="mb-1 block font-medium text-sea-deep">
-                        Question Text (English / 영어 번역, Optional)
+                        {t('영어 번역 문항 (English Translation, Optional)', 'Question Text (English, Optional)')}
                       </span>
                       <input
                         type="text"
                         value={q.text_en}
                         onChange={(e) => updateQuestionRow(idx, { text_en: e.target.value })}
-                        placeholder="e.g. I felt happy and joyful today."
+                        placeholder="e.g. I felt joyful and happy today."
                         className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none focus:border-sea/40"
                       />
                     </label>
 
                     <label className="block text-xs">
                       <span className="mb-1 block font-medium text-sea-deep">
-                        Variable Name (변수명 / CSV 열 이름) <span className="text-warn">*</span>
+                        {t('변수명 (Variable Name / CSV Column)', 'Variable Name')} <span className="text-warn">*</span>
                       </span>
                       <input
                         type="text"
@@ -653,7 +824,7 @@ export function SurveyEditorPage() {
                           }
                           className="size-3.5 accent-sea rounded"
                         />
-                        <span>Reverse scored (역코딩 문항)</span>
+                        <span>{t('역코딩 문항 (Reverse scored item)', 'Reverse scored item')}</span>
                       </label>
                     </div>
                   </div>
@@ -665,8 +836,53 @@ export function SurveyEditorPage() {
                 onClick={addQuestionRow}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-sea/50 bg-white/70 px-4 py-2 text-xs font-semibold text-sea transition hover:bg-mist/70 active:scale-[0.98]"
               >
-                <span>+</span> Add another question to this scale (문항 추가)
+                <span>+</span> {t('이 척도에 문항 추가 (Add another question)', 'Add another question to this scale')}
               </button>
+            </div>
+          </div>
+
+          {/* STEP 3: Shared Response Format & Options (NOW STEP 3!) */}
+          <div className="rounded-xl border border-sand/80 bg-white/75 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sea text-white text-[11px] font-bold">
+                3
+              </span>
+              <h4 className="text-sm font-semibold text-sea-deep">
+                {t('공통 응답 유형 및 선택지 설정 (Shared Response Format & Options)', 'Shared Response Format & Options')}
+              </h4>
+            </div>
+            <p className="text-xs text-ink-soft pl-7">
+              {t(
+                '위에서 작성한 모든 문항에 동일하게 적용되는 공통 응답 선택지 및 척도 유형입니다.',
+                'All question items above will share this response scale and options.',
+              )}
+            </p>
+
+            <div className="pl-7 space-y-4">
+              <label className="block text-xs max-w-sm">
+                <span className="mb-1 block font-semibold text-sea-deep">
+                  {t('응답 유형 (Question Type)', 'Question Type')} <span className="text-warn">*</span>
+                </span>
+                <select
+                  value={itemType}
+                  onChange={(e) => setItemType(e.target.value as ItemType)}
+                  className="w-full rounded-lg border border-sand bg-white px-3 py-2 text-xs outline-none transition focus:border-sea/50 focus:ring-4 focus:ring-sea/10"
+                >
+                  {ITEM_TYPES.map((tItem) => (
+                    <option key={tItem.value} value={tItem.value}>
+                      {tItem.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <ResponseOptionsEditor
+                itemType={itemType}
+                options={options}
+                onOptionsChange={setOptions}
+                continuousConfig={continuousConfig}
+                onContinuousConfigChange={setContinuousConfig}
+              />
             </div>
           </div>
 
@@ -676,7 +892,7 @@ export function SurveyEditorPage() {
               disabled={busy}
               className="rounded-xl bg-sea px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sea-bright active:scale-[0.98] disabled:opacity-50"
             >
-              Add {questions.length} Question{questions.length === 1 ? '' : 's'} to Survey
+              {t(`설문에 ${questions.length}개 문항 일괄 추가하기`, `Add ${questions.length} Question${questions.length === 1 ? '' : 's'} to Survey`)}
             </button>
           </div>
         </form>
@@ -687,10 +903,13 @@ export function SurveyEditorPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sand/70 pb-3">
           <div>
             <h3 className="font-display text-xl font-semibold text-sea-deep">
-              Survey items ({items.length})
+              {t(`설문 문항 목록 (${items.length}개)`, `Survey items (${items.length})`)}
             </h3>
             <p className="text-xs text-ink-soft">
-              Drag items (⠿) to rearrange question order. Click Edit to adjust wording or options.
+              {t(
+                '⠿ 아이콘을 드래그하여 문항 순서를 재배치할 수 있습니다. Edit 버튼으로 문항과 선택지를 수정하세요.',
+                'Drag items (⠿) to rearrange question order. Click Edit to adjust wording or options.',
+              )}
             </p>
           </div>
 
@@ -706,21 +925,21 @@ export function SurveyEditorPage() {
                 onClick={() => setViewMode('detailed')}
                 className={[
                   'rounded-lg px-3 py-1.5 transition flex items-center gap-1.5',
-                  viewMode === 'detailed' ? 'bg-sea text-white' : 'text-ink-soft hover:text-sea-deep',
+                  viewMode === 'detailed' ? 'bg-sea text-white shadow-xs' : 'text-ink-soft hover:text-sea-deep',
                 ].join(' ')}
               >
-                <span>Cards</span>
+                <span>{t('카드 뷰', 'Cards')}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('condensed')}
                 className={[
                   'rounded-lg px-3 py-1.5 transition flex items-center gap-1.5',
-                  viewMode === 'condensed' ? 'bg-sea text-white' : 'text-ink-soft hover:text-sea-deep',
+                  viewMode === 'condensed' ? 'bg-sea text-white shadow-xs' : 'text-ink-soft hover:text-sea-deep',
                 ].join(' ')}
-                title="Condensed table view for bigger picture overview"
+                title={t('전체 문항을 컴팩트한 표 형태로 한눈에 조망', 'Condensed table view for bigger picture overview')}
               >
-                <span>Condensed View (한눈에 보기)</span>
+                <span>{t('한눈에 보기 (Condensed)', 'Condensed View')}</span>
               </button>
             </div>
 
@@ -735,7 +954,7 @@ export function SurveyEditorPage() {
                 onClick={() => setLocale('ko')}
                 className={[
                   'rounded-lg px-2.5 py-1.5 transition',
-                  locale === 'ko' ? 'bg-sea text-white' : 'text-ink-soft hover:text-sea-deep',
+                  locale === 'ko' ? 'bg-sea text-white shadow-xs' : 'text-ink-soft hover:text-sea-deep',
                 ].join(' ')}
               >
                 한국어
@@ -745,7 +964,7 @@ export function SurveyEditorPage() {
                 onClick={() => setLocale('en')}
                 className={[
                   'rounded-lg px-2.5 py-1.5 transition',
-                  locale === 'en' ? 'bg-sea text-white' : 'text-ink-soft hover:text-sea-deep',
+                  locale === 'en' ? 'bg-sea text-white shadow-xs' : 'text-ink-soft hover:text-sea-deep',
                 ].join(' ')}
               >
                 EN
@@ -756,9 +975,14 @@ export function SurveyEditorPage() {
 
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-sand bg-white/40 p-8 text-center">
-            <p className="text-sm font-medium text-sea-deep">No questions in this survey yet.</p>
+            <p className="text-sm font-medium text-sea-deep">
+              {t('아직 설문에 등록된 문항이 없습니다.', 'No questions in this survey yet.')}
+            </p>
             <p className="mt-1 text-xs text-ink-soft">
-              Choose a validated scale from above or create custom questions using the form.
+              {t(
+                '위의 검증된 척도를 추가하거나 직접 문항을 작성해 보세요.',
+                'Choose a validated scale from above or create custom questions using the form.',
+              )}
             </p>
           </div>
         ) : viewMode === 'condensed' ? (
@@ -768,10 +992,10 @@ export function SurveyEditorPage() {
               <thead className="border-b border-sand/80 bg-mist/50 text-[11px] uppercase tracking-wider text-ink-soft font-semibold">
                 <tr>
                   <th className="py-2.5 pl-3 pr-1 w-16">#</th>
-                  <th className="py-2.5 px-2 w-36">Variable / Scale</th>
-                  <th className="py-2.5 px-2">Question Text ({locale === 'ko' ? '한국어' : 'English'})</th>
-                  <th className="py-2.5 px-2 w-28">Type</th>
-                  <th className="py-2.5 pl-2 pr-3 text-right w-24">Actions</th>
+                  <th className="py-2.5 px-2 w-36">{t('변수명 / 척도', 'Variable / Scale')}</th>
+                  <th className="py-2.5 px-2">{t('문항 내용', 'Question Text')} ({locale === 'ko' ? '한국어' : 'English'})</th>
+                  <th className="py-2.5 px-2 w-28">{t('응답 유형', 'Type')}</th>
+                  <th className="py-2.5 pl-2 pr-3 text-right w-24">{t('관리', 'Actions')}</th>
                 </tr>
               </thead>
               <tbody>

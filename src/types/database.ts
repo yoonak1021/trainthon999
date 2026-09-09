@@ -159,6 +159,8 @@ export type ValidatedScale = {
   name_en: string
   shortName: string
   source: string
+  citation: string
+  keywords: string[]
   scoringNote: string
   itemType: ItemType
   responseOptions: ResponseOption[]

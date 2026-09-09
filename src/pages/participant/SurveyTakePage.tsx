@@ -4,6 +4,7 @@ import { BilingualItemText } from '../../components/participant/BilingualItemTex
 import { ItemRenderer } from '../../components/participant/ItemRenderer'
 import { isAnswerComplete } from '../../components/participant/answerUtils'
 import { ProgressBar } from '../../components/participant/ProgressBar'
+import { LanguageSwitcherButton, useLocale } from '../../context/LocaleContext'
 import {
   listResponsesForOccasion,
   resolveParticipationSession,
@@ -11,7 +12,6 @@ import {
 } from '../../lib/api'
 import type {
   AnswerInput,
-  ContentLocale,
   Participant,
   PromptOccasion,
   Survey,
@@ -32,6 +32,7 @@ export function SurveyTakePage() {
   const { code = '' } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const { locale, t } = useLocale()
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +42,6 @@ export function SurveyTakePage() {
   const [saving, setSaving] = useState(false)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [animKey, setAnimKey] = useState(0)
-  const [locale, setLocale] = useState<ContentLocale>('ko')
   const [, startTransition] = useTransition()
 
   useEffect(() => {
@@ -56,7 +56,10 @@ export function SurveyTakePage() {
         if (cancelled) return
         if (!resolved || resolved.items.length === 0) {
           setError(
-            'We couldn’t find an active survey for that code. Check with your researcher.',
+            t(
+              '해당 코드에 배정된 설문을 찾을 수 없습니다. 연구 담당자에게 문의하세요.',
+              'We couldn’t find an active survey for that code. Check with your researcher.',
+            ),
           )
           setPhase('error')
           return
@@ -93,7 +96,7 @@ export function SurveyTakePage() {
     return () => {
       cancelled = true
     }
-  }, [code, params])
+  }, [code, params, t])
 
   const item = session?.items[index]
   const total = session?.items.length ?? 0
@@ -134,7 +137,11 @@ export function SurveyTakePage() {
         setAnimKey((k) => k + 1)
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save response.')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('응답을 저장하지 못했습니다.', 'Could not save response.'),
+      )
     } finally {
       setSaving(false)
     }
@@ -143,7 +150,9 @@ export function SurveyTakePage() {
   if (phase === 'loading') {
     return (
       <div className="flex min-h-dvh items-center justify-center px-5">
-        <p className="animate-fade text-sm text-ink-soft">Loading your survey…</p>
+        <p className="animate-fade text-sm text-ink-soft">
+          {t('설문을 불러오는 중입니다…', 'Loading your survey…')}
+        </p>
       </div>
     )
   }
@@ -151,13 +160,18 @@ export function SurveyTakePage() {
   if (phase === 'error' || !session) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5">
-        <h1 className="font-display text-2xl font-semibold text-sea-deep">Unable to start</h1>
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcherButton />
+        </div>
+        <h1 className="font-display text-2xl font-semibold text-sea-deep">
+          {t('설문을 시작할 수 없습니다', 'Unable to start')}
+        </h1>
         <p className="mt-3 text-ink-soft">{error}</p>
         <Link
           to="/p"
           className="mt-6 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-sea px-5 font-semibold text-white"
         >
-          Try another code
+          {t('다른 코드로 다시 시도', 'Try another code')}
         </Link>
       </div>
     )
@@ -165,34 +179,40 @@ export function SurveyTakePage() {
 
   if (phase === 'intro') {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-10 pt-10">
-        <div className="animate-rise flex flex-1 flex-col justify-center">
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-between px-5 pb-10 pt-6">
+        <div className="flex justify-end">
+          <LanguageSwitcherButton />
+        </div>
+
+        <div className="animate-rise flex flex-1 flex-col justify-center my-auto">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sea">
-            {session.occasion.label ?? `Occasion ${session.occasion.occasion_index}`}
+            {session.occasion.label ??
+              `${t('회차', 'Occasion')} ${session.occasion.occasion_index}`}
           </p>
           <h1 className="mt-2 font-display text-[2rem] font-semibold leading-tight text-sea-deep">
             {session.survey.title}
           </h1>
           <p className="mt-2 text-sm text-ink-soft">
-            {session.studyTitle} · Code{' '}
+            {session.studyTitle} · {t('코드', 'Code')}{' '}
             <span className="font-semibold text-sea-deep">
               {session.participant.participant_code}
             </span>
           </p>
           {session.survey.instructions && (
-            <p className="mt-6 rounded-2xl border border-sand/80 bg-white/60 px-4 py-4 text-[15px] leading-relaxed text-ink-soft">
+            <p className="mt-6 rounded-2xl border border-sand/80 bg-white/60 px-4 py-4 text-[15px] leading-relaxed text-ink-soft whitespace-pre-wrap">
               {session.survey.instructions}
             </p>
           )}
           <p className="mt-4 text-sm text-ink-soft">
-            {total} question{total === 1 ? '' : 's'} · one at a time · answers save as you go
+            {total} {t('문항', 'question(s)')} · {t('한 문항씩 진행', 'one at a time')} ·{' '}
+            {t('응답은 실시간 자동 저장됩니다', 'answers save as you go')}
           </p>
           <button
             type="button"
             onClick={() => setPhase('items')}
             className="mt-8 flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-sea text-base font-semibold text-white shadow-[0_12px_32px_-14px_rgba(31,111,106,0.9)] transition hover:bg-sea-bright active:scale-[0.98]"
           >
-            Begin
+            {t('설문 시작하기', 'Begin')}
           </button>
         </div>
       </div>
@@ -206,35 +226,11 @@ export function SurveyTakePage() {
       <header className="animate-fade shrink-0 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <p className="truncate text-xs font-medium text-ink-soft">
-            {session.occasion.label ?? `Wave ${session.occasion.occasion_index}`}
+            {session.occasion.label ??
+              `${t('회차', 'Wave')} ${session.occasion.occasion_index}`}
           </p>
           <div className="flex items-center gap-2">
-            <div
-              className="inline-flex rounded-lg border border-sand bg-white/70 p-0.5 text-[11px] font-semibold"
-              role="group"
-              aria-label="Language"
-            >
-              <button
-                type="button"
-                onClick={() => setLocale('ko')}
-                className={[
-                  'rounded-md px-2 py-1 transition',
-                  locale === 'ko' ? 'bg-sea text-white' : 'text-ink-soft',
-                ].join(' ')}
-              >
-                한
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocale('en')}
-                className={[
-                  'rounded-md px-2 py-1 transition',
-                  locale === 'en' ? 'bg-sea text-white' : 'text-ink-soft',
-                ].join(' ')}
-              >
-                EN
-              </button>
-            </div>
+            <LanguageSwitcherButton />
             <p className="text-xs font-semibold tracking-wide text-sea-deep">
               {session.participant.participant_code}
             </p>
@@ -276,7 +272,7 @@ export function SurveyTakePage() {
           }}
           className="min-h-[56px] min-w-[96px] rounded-2xl border border-sand bg-white/70 px-4 text-sm font-semibold text-sea-deep transition enabled:active:scale-[0.98] disabled:opacity-40"
         >
-          Back
+          {t('이전', 'Back')}
         </button>
         <button
           type="button"
@@ -284,7 +280,11 @@ export function SurveyTakePage() {
           onClick={() => void persistAndGo(index + 1)}
           className="flex min-h-[56px] flex-1 items-center justify-center rounded-2xl bg-sea text-base font-semibold text-white shadow-[0_12px_32px_-14px_rgba(31,111,106,0.85)] transition enabled:hover:bg-sea-bright enabled:active:scale-[0.98] disabled:opacity-45"
         >
-          {saving ? 'Saving…' : index === total - 1 ? 'Finish' : 'Next'}
+          {saving
+            ? t('저장 중…', 'Saving…')
+            : index === total - 1
+              ? t('제출 완료', 'Finish')
+              : t('다음', 'Next')}
         </button>
       </footer>
 

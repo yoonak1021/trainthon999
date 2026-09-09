@@ -109,6 +109,36 @@ function shortNameFromEn(nameEn: string, scaleId: string): string {
   return scaleId.toUpperCase()
 }
 
+const APA_CITATIONS: Record<string, string> = {
+  dpes_awe:
+    'Shiota, M. N., Keltner, D., & John, O. P. (2006). Positive emotion differentiation: A functional approach. Cognition and Emotion, 20(1), 63–89. https://doi.org/10.1080/02699930500236033',
+  tipi:
+    'Gosling, S. D., Rentfrow, P. J., & Swann, W. B., Jr. (2003). A very brief measure of the Big-Five personality domains. Journal of Research in Personality, 37(6), 504–528. https://doi.org/10.1016/S0092-6566(03)00046-1',
+  swls:
+    'Diener, E., Emmons, R. A., Larsen, R. J., & Griffin, S. (1985). The Satisfaction With Life Scale. Journal of Personality Assessment, 49(1), 71–75. https://doi.org/10.1207/s15327752jpa4901_13',
+  prlq:
+    'Oishi, S., Choi, H., Buttrick, N., Graham, J., Tao, R., Sullivan, D., Koo, J., Biesanz, J. C., Westgate, E. C., & Buchtel, E. E. (2019). The psychologically rich life questionnaire. Journal of Research in Personality, 81, 257–270. https://doi.org/10.1016/j.jrp.2019.06.010',
+  spane:
+    'Diener, E., Wirtz, D., Tov, W., Kim-Prieto, C., Choi, D., Oishi, S., & Biswas-Diener, R. (2010). New well-being measures: Short scales to assess flourishing and positive and negative feelings. Social Indicators Research, 97(2), 143–156. https://doi.org/10.1007/s11205-009-9493-y',
+  mvs:
+    'Richins, M. L. (2004). The Material Values Scale: Measurement properties and development of a short form. Journal of Consumer Research, 31(1), 209–219. https://doi.org/10.1086/383436',
+  small_pes:
+    'Piff, P. K., Dietze, P., Feinberg, M., Stancato, D. M., & Keltner, D. (2015). Awe, the small self, and prosocial behavior. Journal of Personality and Social Psychology, 108(6), 883–899; Campbell, W. K., Bonacci, A. M., Shelton, J., Exline, J. J., & Bushman, B. J. (2004). Psychological entitlement: Interpersonal consequences and validation of a new measure. Journal of Personality Assessment, 83(1), 29–45.',
+  awe_sf:
+    'Yaden, D. B., Kaufman, S. B., Hyde, E., Chirico, A., Gaggioli, A., Wei, M., & Newberg, A. B. (2019). The development of the Awe Experience Scale (AWE-S): A multifactorial measure for research in the integrative study of awe. The Journal of Positive Psychology, 14(4), 474–488. https://doi.org/10.1080/17439760.2018.1484940',
+}
+
+const SCALE_KEYWORDS: Record<string, string[]> = {
+  dpes_awe: ['awe', '경외감', 'positive emotion', '긍정 정서', 'wonder', '경이로움', 'nature', '자연', 'shiota', 'keltner', 'john'],
+  tipi: ['personality', '성격', 'big five', '빅파이브', 'extraversion', 'agreeableness', 'conscientiousness', 'neuroticism', 'openness', '외향성', '성실성', '개방성', '친화성', '정서안정성', 'gosling', 'rentfrow', 'swann'],
+  swls: ['life satisfaction', '삶의 만족', 'wellbeing', '웰빙', 'happiness', '행복', 'subjective well-being', 'diener', 'emmons', 'larsen', 'griffin'],
+  prlq: ['psychologically rich life', '심리적 풍요', '풍요로운 삶', 'novel experiences', '새로운 경험', 'curiosity', '호기심', 'oishi', 'choi'],
+  spane: ['positive experience', 'negative experience', '긍정 경험', '부정 경험', 'affect', '정동', 'mood', '기분', 'emotion', '감정', 'diener', 'wirtz'],
+  mvs: ['materialism', '물질주의', 'material values', '소유', 'possession', 'luxury', 'luxury goods', '쇼핑', 'richins', 'dawson'],
+  small_pes: ['small self', '작은 자아', 'entitlement', '특권 의식', 'humility', '겸손', 'ego', '자아', 'piff', 'campbell', 'keltner'],
+  awe_sf: ['awe', '경외감', 'vastness', '거대함', 'connectedness', '연결감', 'goosebumps', '소름', 'transcendence', '초월', 'yaden', 'kaufman'],
+}
+
 function toValidatedScale(scale: SeedScale): ValidatedScale {
   const { options, leftKr, leftEn, rightKr, rightEn } = optionsForScale(scale)
   return {
@@ -117,6 +147,8 @@ function toValidatedScale(scale: SeedScale): ValidatedScale {
     name_en: scale.name_en,
     shortName: shortNameFromEn(scale.name_en, scale.scale_id),
     source: scale.source,
+    citation: APA_CITATIONS[scale.scale_id] || scale.source,
+    keywords: SCALE_KEYWORDS[scale.scale_id] || [],
     scoringNote: scale.scoring_note,
     itemType: 'likert',
     responseOptions: options,
