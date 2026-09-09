@@ -4,12 +4,12 @@
  */
 
 import type { ResponseExportRow } from '../types/database'
+import { scoreAll } from './scoring'
 import {
-  scoreAll,
-  scoredVariablesForScales,
+  scoredVariableNames,
+  specsWithSettings,
   type ScaleScoringSettings,
-  type ScoreAllResult,
-} from './scoring'
+} from './scoringProtocol'
 
 export type WideRow = {
   participant_code: string
@@ -17,7 +17,8 @@ export type WideRow = {
   occasion_label: string | null
   /** variable_name → numeric (or null) */
   raw: Record<string, number | null>
-  scored: ScoreAllResult
+  /** Scored variable_name → value */
+  scored: Record<string, number | null>
 }
 
 export function collectRawItemColumns(rows: ResponseExportRow[]): string[] {
@@ -31,8 +32,6 @@ export function collectRawItemColumns(rows: ResponseExportRow[]): string[] {
 export function collectScaleIdsFromRows(rows: ResponseExportRow[]): string[] {
   const set = new Set<string>()
   for (const r of rows) {
-    // Infer scale id from variable prefix / known scored defs via source in item
-    // ResponseExportRow has scale_name but not scale_id; infer from variable_name prefixes.
     const v = r.variable_name
     if (v.startsWith('dpes_awe')) set.add('dpes_awe')
     else if (v.startsWith('tipi_')) set.add('tipi')
@@ -59,7 +58,7 @@ export function buildWideRows(
   }
 
   const scaleIds = collectScaleIdsFromRows(rows)
-  const scaleSet = new Set(scaleIds)
+  const specs = specsWithSettings(settingsByScale, scaleIds)
 
   const wide: WideRow[] = []
   for (const [, group] of groups) {
@@ -69,7 +68,7 @@ export function buildWideRows(
       raw[r.variable_name] =
         r.numeric_value == null ? null : Number(r.numeric_value)
     }
-    const scored = scoreAll(raw, settingsByScale, scaleSet)
+    const scored = scoreAll(raw, specs)
     wide.push({
       participant_code: first.participant_code,
       occasion_index: first.occasion_index,
@@ -87,10 +86,13 @@ export function buildWideRows(
 }
 
 export function scoredColumnNames(scaleIds: string[]): string[] {
-  return scoredVariablesForScales(scaleIds).map((v) => v.name)
+  return scoredVariableNames(scaleIds)
 }
 
-export function toCsv(headers: string[], rows: Array<Array<string | number | null | undefined>>): string {
+export function toCsv(
+  headers: string[],
+  rows: Array<Array<string | number | null | undefined>>,
+): string {
   const escape = (value: string | number | null | undefined) => {
     if (value == null) return ''
     const s = String(value)
@@ -103,7 +105,11 @@ export function toCsv(headers: string[], rows: Array<Array<string | number | nul
   ].join('\n')
 }
 
-export function downloadTextFile(filename: string, contents: string, mime = 'text/csv;charset=utf-8') {
+export function downloadTextFile(
+  filename: string,
+  contents: string,
+  mime = 'text/csv;charset=utf-8',
+) {
   const blob = new Blob([contents], { type: mime })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

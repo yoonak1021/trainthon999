@@ -6,7 +6,7 @@
 import {
   getAllDefaultSettings,
   type ScaleScoringSettings,
-} from './scoring'
+} from './scoringProtocol'
 
 const STORAGE_KEY = 'wave-scoring-settings-v1'
 

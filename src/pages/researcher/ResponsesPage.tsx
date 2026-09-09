@@ -17,7 +17,7 @@ import {
   type AggregationMethod,
   type MissingDataRule,
   type ScaleScoringSettings,
-} from '../../lib/scoring'
+} from '../../lib/scoringProtocol'
 import {
   loadScoringSettings,
   resetScoringSettings,
@@ -123,7 +123,7 @@ export function ResponsesPage() {
       w.occasion_index,
       w.occasion_label,
       ...scoredColumns.map((col) => {
-        const v = w.scored.scores[col]
+        const v = w.scored[col]
         return v == null ? '' : Number(v.toFixed(6))
       }),
     ])
@@ -409,13 +409,11 @@ export function ResponsesPage() {
                           {w.occasion_label ?? w.occasion_index}
                         </td>
                         {scoredColumns.map((col) => {
-                          const v = w.scored.scores[col]
-                          const note = w.scored.notes[col]
+                          const v = w.scored[col]
                           return (
                             <td
                               key={col}
                               className="px-3 py-2.5 tabular-nums text-ink"
-                              title={note}
                             >
                               {v == null ? '—' : roundDisplay(v)}
                             </td>
