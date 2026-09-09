@@ -413,7 +413,10 @@ export function scoreAll(
     const defaults = getDefaultScaleSettings(def.scaleId)
     const settings = { ...defaults, ...settingsByScale[def.scaleId] }
     const reverse = reverseMapForScale(def.scaleId)
-    const method = def.aggregation ?? settings.aggregation
+    // Protocol setting wins — editable in researcher UI. Per-variable
+    // `aggregation` on the def is only the conventional default baked into
+    // getDefaultScaleSettings(), not a silent override.
+    const method = settings.aggregation
 
     const collected: number[] = []
     for (const varName of def.items) {
@@ -520,8 +523,7 @@ export function buildCodebook(
           : def.items.join(';'),
         aggregation: def.derive
           ? 'derived'
-          : (def.aggregation ?? settings.aggregation),
-        response_min: settings.min,
+          : settings.aggregation,        response_min: settings.min,
         response_max: settings.max,
         missing_rule: settings.missingRule,
         notes: scale.scoring_note,
