@@ -13,8 +13,13 @@ export type ItemType =
 
 export type ItemSource = 'validated_scale' | 'custom'
 
+export type ContentLocale = 'ko' | 'en'
+
 export type ResponseOption = {
+  /** Display label for the active locale (filled at render / copy time). */
   label: string
+  label_kr?: string
+  label_en?: string
   value: number
 }
 
@@ -51,7 +56,10 @@ export type SurveyItem = {
   id: string
   survey_id: string
   item_type: ItemType
+  /** Administered default text (Korean for validated scales). */
   item_text: string
+  item_text_kr: string | null
+  item_text_en: string | null
   display_order: number
   response_options: ResponseOption[] | null
   min_value: number | null
@@ -59,8 +67,14 @@ export type SurveyItem = {
   step_value: number | null
   left_anchor: string | null
   right_anchor: string | null
+  left_anchor_kr: string | null
+  left_anchor_en: string | null
+  right_anchor_kr: string | null
+  right_anchor_en: string | null
   variable_name: string
   scale_name: string | null
+  scale_name_kr: string | null
+  scale_name_en: string | null
   position_in_scale: number | null
   reverse_scored: boolean
   subscale: string | null
@@ -111,26 +125,56 @@ export type AnswerInput = {
   selected_values?: number[] | null
 }
 
-/** Library definition for a validated scale (hardcoded for now). */
-export type ValidatedScaleItem = {
-  position: number
-  text: string
-  reverseScored: boolean
-  variableSuffix: string
-  subscale?: string
+export type SeedResponseScale = {
+  type: string
+  points: number
+  anchors_proposed_en: string
+  verified: boolean
 }
 
+export type SeedScaleItem = {
+  variable_name: string
+  position_in_scale: number
+  subscale: string | null
+  reverse_scored: boolean
+  text_kr: string
+  text_en: string
+}
+
+/** Shape of one entry in validated_scales_seed.json */
+export type SeedScale = {
+  scale_id: string
+  name_kr: string
+  name_en: string
+  source: string
+  response_scale: SeedResponseScale
+  scoring_note: string
+  items: SeedScaleItem[]
+}
+
+/** App-facing validated scale used by the researcher picker. */
 export type ValidatedScale = {
   id: string
+  name_kr: string
+  name_en: string
   shortName: string
-  fullName: string
-  instructions: string
-  citation: string
+  source: string
+  scoringNote: string
   itemType: ItemType
   responseOptions: ResponseOption[]
-  leftAnchor?: string
-  rightAnchor?: string
-  items: ValidatedScaleItem[]
+  leftAnchorKr: string
+  leftAnchorEn: string
+  rightAnchorKr: string
+  rightAnchorEn: string
+  responseScale: SeedResponseScale
+  items: Array<{
+    variable_name: string
+    position: number
+    subscale: string | null
+    reverseScored: boolean
+    text_kr: string
+    text_en: string
+  }>
 }
 
 export type ResponseExportRow = Response & {

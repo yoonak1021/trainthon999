@@ -26,7 +26,20 @@ Mobile-first longitudinal survey platform for psychology research — an alterna
 
 Full proposed schema with comments: [`supabase/schema.sql`](supabase/schema.sql)
 
-Tables: `studies`, `participants`, `surveys`, `survey_items`, `prompts`, `prompt_occasions`, `responses` (+ `response_export` view).
+Tables: `studies`, `participants`, `surveys`, `survey_items`, `prompts`, `prompt_occasions`, `responses`, plus library tables `instruments` / `instrument_items` (+ `response_export` view).
+
+### Validated scales seed
+
+Bilingual catalog (8 scales): [`supabase/seed/validated_scales.json`](supabase/seed/validated_scales.json)
+
+```bash
+# Apply schema, then:
+psql "$DATABASE_URL" -f supabase/seed/validated_scales_seed.sql
+# Or regenerate SQL after editing the JSON:
+python3 scripts/generate_validated_scales_seed.py
+```
+
+In the researcher survey editor, **Choose from validated scales** lists these instruments and copies all items into the current survey (custom items can still be mixed in). Item text defaults to Korean with English available.
 
 ## Setup
 

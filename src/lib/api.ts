@@ -1,9 +1,14 @@
 /**
  * Data access layer. Talks to Supabase when configured; otherwise uses
  * the local demo store so researcher + participant flows work offline.
+ *
+ * Validated scales: loaded from src/data/validated_scales_seed.json and
+ * copied into survey_items (preserving variable_name, position_in_scale,
+ * subscale, reverse_scored, text_kr/text_en). Postgres seed lives at
+ * supabase/seed/validated_scales_seed.sql (instruments + instrument_items).
  */
 
-import { getValidatedScale, PSS_10 } from '../data/scales'
+import { DEMO_SCALE, getValidatedScale } from '../data/scales'
 import {
   ensureDemoSeed,
   newId,
@@ -42,22 +47,30 @@ function scaleItemsToSurveyItems(
     id: newId(),
     survey_id: surveyId,
     item_type: scale.itemType,
-    item_text: item.text,
+    // Default administered language = Korean
+    item_text: item.text_kr,
+    item_text_kr: item.text_kr,
+    item_text_en: item.text_en,
     display_order: startOrder + i,
     response_options: scale.responseOptions,
-    min_value: scale.responseOptions[0]?.value ?? 0,
-    max_value: scale.responseOptions[scale.responseOptions.length - 1]?.value ?? 4,
+    min_value: scale.responseOptions[0]?.value ?? 1,
+    max_value:
+      scale.responseOptions[scale.responseOptions.length - 1]?.value ??
+      scale.responseScale.points,
     step_value: 1,
-    left_anchor: scale.leftAnchor ?? scale.responseOptions[0]?.label ?? null,
-    right_anchor:
-      scale.rightAnchor ??
-      scale.responseOptions[scale.responseOptions.length - 1]?.label ??
-      null,
-    variable_name: `${scale.id.replace(/-/g, '_')}_${item.variableSuffix}`,
+    left_anchor: scale.leftAnchorKr,
+    right_anchor: scale.rightAnchorKr,
+    left_anchor_kr: scale.leftAnchorKr,
+    left_anchor_en: scale.leftAnchorEn,
+    right_anchor_kr: scale.rightAnchorKr,
+    right_anchor_en: scale.rightAnchorEn,
+    variable_name: item.variable_name,
     scale_name: scale.shortName,
+    scale_name_kr: scale.name_kr,
+    scale_name_en: scale.name_en,
     position_in_scale: item.position,
     reverse_scored: item.reverseScored,
-    subscale: item.subscale ?? null,
+    subscale: item.subscale,
     source: 'validated_scale' as const,
     source_scale_id: scale.id,
     created_at: ts,
@@ -66,7 +79,7 @@ function scaleItemsToSurveyItems(
 
 function getDb(): LocalDb {
   return ensureDemoSeed((surveyId, startOrder) =>
-    scaleItemsToSurveyItems(surveyId, PSS_10, startOrder),
+    scaleItemsToSurveyItems(surveyId, DEMO_SCALE, startOrder),
   )
 }
 
@@ -233,6 +246,14 @@ function normalizeItem(row: SurveyItem): SurveyItem {
   return {
     ...row,
     response_options: row.response_options ?? null,
+    item_text_kr: row.item_text_kr ?? row.item_text ?? null,
+    item_text_en: row.item_text_en ?? null,
+    left_anchor_kr: row.left_anchor_kr ?? row.left_anchor ?? null,
+    left_anchor_en: row.left_anchor_en ?? null,
+    right_anchor_kr: row.right_anchor_kr ?? row.right_anchor ?? null,
+    right_anchor_en: row.right_anchor_en ?? null,
+    scale_name_kr: row.scale_name_kr ?? null,
+    scale_name_en: row.scale_name_en ?? null,
   }
 }
 
@@ -255,10 +276,11 @@ export async function addValidatedScaleItems(
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.from('survey_items').insert(fresh).select()
     if (error) throw error
-    // Also set survey instructions if empty
     const survey = await getSurvey(surveyId)
     if (survey && !survey.instructions) {
-      await updateSurvey(surveyId, { instructions: scale.instructions })
+      await updateSurvey(surveyId, {
+        instructions: `${scale.name_kr} / ${scale.name_en}\n${scale.scoringNote}`,
+      })
     }
     return listItems(surveyId)
   }
@@ -267,7 +289,7 @@ export async function addValidatedScaleItems(
   db.survey_items.push(...fresh)
   const survey = db.surveys.find((s) => s.id === surveyId)
   if (survey && !survey.instructions) {
-    survey.instructions = scale.instructions
+    survey.instructions = `${scale.name_kr} / ${scale.name_en}\n${scale.scoringNote}`
     survey.updated_at = nowIso()
   }
   saveLocalDb(db)
@@ -278,6 +300,8 @@ export async function addCustomItem(input: {
   survey_id: string
   item_type: ItemType
   item_text: string
+  item_text_kr?: string | null
+  item_text_en?: string | null
   variable_name: string
   response_options?: ResponseOption[] | null
   scale_name?: string | null
@@ -291,11 +315,15 @@ export async function addCustomItem(input: {
   step_value?: number | null
 }): Promise<SurveyItem> {
   const existing = await listItems(input.survey_id)
+  const textKr = input.item_text_kr ?? input.item_text
+  const textEn = input.item_text_en ?? null
   const item: SurveyItem = {
     id: newId(),
     survey_id: input.survey_id,
     item_type: input.item_type,
-    item_text: input.item_text,
+    item_text: textKr,
+    item_text_kr: textKr,
+    item_text_en: textEn,
     display_order: existing.length + 1,
     response_options: input.response_options ?? null,
     min_value: input.min_value ?? null,
@@ -303,8 +331,14 @@ export async function addCustomItem(input: {
     step_value: input.step_value ?? null,
     left_anchor: input.left_anchor ?? null,
     right_anchor: input.right_anchor ?? null,
+    left_anchor_kr: input.left_anchor ?? null,
+    left_anchor_en: input.left_anchor ?? null,
+    right_anchor_kr: input.right_anchor ?? null,
+    right_anchor_en: input.right_anchor ?? null,
     variable_name: input.variable_name,
     scale_name: input.scale_name ?? null,
+    scale_name_kr: input.scale_name ?? null,
+    scale_name_en: input.scale_name ?? null,
     position_in_scale: input.position_in_scale ?? null,
     reverse_scored: input.reverse_scored ?? false,
     subscale: input.subscale ?? null,
@@ -707,5 +741,6 @@ export async function listStudyResponses(studyId: string): Promise<ResponseExpor
 
 export function resetLocalDemo(): void {
   localStorage.removeItem('longitudinal-survey-demo-v1')
+  localStorage.removeItem('longitudinal-survey-demo-v2')
   getDb()
 }

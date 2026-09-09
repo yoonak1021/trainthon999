@@ -14,7 +14,7 @@ import type {
   SurveyItem,
 } from '../types/database'
 
-const STORAGE_KEY = 'longitudinal-survey-demo-v1'
+const STORAGE_KEY = 'longitudinal-survey-demo-v2'
 
 export type LocalDb = {
   studies: Study[]
@@ -60,7 +60,7 @@ export function nowIso(): string {
   return new Date().toISOString()
 }
 
-/** Seed a demo study with PSS-10 so participant flow is immediately tryable. */
+/** Seed a demo study with SWLS so participant flow is immediately tryable. */
 export function ensureDemoSeed(
   seedItems: (surveyId: string, startOrder: number) => SurveyItem[],
 ): LocalDb {
@@ -77,9 +77,9 @@ export function ensureDemoSeed(
   const study: Study = {
     id: studyId,
     owner_id: 'local-researcher',
-    title: 'Demo Stress Diary',
+    title: '데모 종단 연구',
     description:
-      'Example longitudinal study. Participants answer the PSS-10 once per occasion.',
+      'Example longitudinal study. Participants answer SWLS (삶의 만족도 척도) once per occasion.',
     created_at: ts,
     updated_at: ts,
   }
@@ -87,10 +87,10 @@ export function ensureDemoSeed(
   const survey: Survey = {
     id: surveyId,
     study_id: studyId,
-    title: 'Daily Perceived Stress',
-    description: 'PSS-10 administered for repeated measures.',
+    title: '삶의 만족도 체크인',
+    description: 'SWLS administered for repeated measures (Korean default).',
     instructions:
-      'The questions in this scale ask you about your feelings and thoughts during the last month. In each case, you will be asked to indicate how often you felt or thought a certain way.',
+      '다음 문항들에 대해 각 진술에 얼마나 동의하는지 표시해 주세요. / Please indicate how much you agree with each statement.',
     created_at: ts,
     updated_at: ts,
   }

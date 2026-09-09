@@ -101,9 +101,57 @@ create type public.item_type as enum (
 );
 
 create type public.item_source as enum (
-  'validated_scale', -- pre-filled from a known instrument (e.g. PSS-10)
+  'validated_scale', -- pre-filled from a known instrument (e.g. SWLS)
   'custom'           -- created manually by the researcher
 );
+
+-- ---------------------------------------------------------------------------
+-- instruments (validated scale library)
+-- Reference catalog of published instruments. Researchers pick from this
+-- library; items are then *copied* into survey_items for a specific survey.
+-- Seeded from supabase/seed/validated_scales_seed.sql.
+-- ---------------------------------------------------------------------------
+create table public.instruments (
+  -- Stable machine id (e.g. 'swls', 'tipi'). Also used as source_scale_id.
+  scale_id          text primary key,
+  name_kr           text not null,
+  name_en           text not null,
+  source            text,            -- citation / origin
+  -- e.g. {"type":"likert","points":7,"anchors_proposed_en":"...","verified":false}
+  response_scale    jsonb not null,
+  scoring_note      text,
+  created_at        timestamptz not null default now()
+);
+
+comment on table public.instruments is
+  'Validated psychology scale catalog (library). Not survey-specific.';
+
+-- ---------------------------------------------------------------------------
+-- instrument_items
+-- Library item rows. Preserves every field from the seed JSON. When a
+-- researcher adds a scale to a survey, these rows are copied into
+-- survey_items (same research metadata + bilingual text).
+-- ---------------------------------------------------------------------------
+create table public.instrument_items (
+  id                  uuid primary key default gen_random_uuid(),
+  scale_id            text not null references public.instruments (scale_id) on delete cascade,
+  variable_name       text not null,
+  position_in_scale   integer not null,
+  subscale            text,
+  reverse_scored      boolean not null default false,
+  -- Korean is the validated administered wording; English is the source wording.
+  text_kr             text not null,
+  text_en             text not null,
+  created_at          timestamptz not null default now(),
+
+  constraint instrument_items_scale_variable_unique unique (scale_id, variable_name),
+  constraint instrument_items_scale_position_unique unique (scale_id, position_in_scale)
+);
+
+create index instrument_items_scale_id_idx on public.instrument_items (scale_id);
+
+comment on table public.instrument_items is
+  'Template items for a validated instrument; copied into survey_items on pick.';
 
 -- ---------------------------------------------------------------------------
 -- survey_items
@@ -117,12 +165,16 @@ create table public.survey_items (
 
   -- Presentation / response modality
   item_type           public.item_type not null,
+  -- Administered text (defaults to Korean for validated scales).
   item_text           text not null,
+  -- Bilingual wording. Korean is default for participants; English available.
+  item_text_kr        text,
+  item_text_en        text,
   -- Display order within the survey session (1-based).
   display_order       integer not null,
 
   -- Response options with numeric coding, e.g.
-  -- [{"label":"Never","value":0},{"label":"Very Often","value":4}]
+  -- [{"label":"Never","label_kr":"전혀 아니다","label_en":"Never","value":0}, ...]
   -- Null for open_text / visual_analog (VAS uses min/max instead).
   response_options    jsonb,
 
@@ -130,25 +182,31 @@ create table public.survey_items (
   min_value           numeric,
   max_value           numeric,
   step_value          numeric,
-  left_anchor         text,   -- e.g. "Not at all"
-  right_anchor        text,   -- e.g. "Extremely"
+  left_anchor         text,   -- e.g. "Not at all" (legacy / current locale)
+  right_anchor        text,
+  left_anchor_kr      text,
+  left_anchor_en      text,
+  right_anchor_kr     text,
+  right_anchor_en     text,
 
   -- ---- Research export fields (critical for longitudinal analysis) ----
-  -- Column name in a wide export (e.g. pss_1). Unique within a survey.
+  -- Column name in a wide export (e.g. swls_1). Unique within a survey.
   variable_name       text not null,
-  -- Scale this item belongs to (e.g. 'PSS-10'). Null for one-off custom items.
+  -- Scale this item belongs to (e.g. 'SWLS'). Null for one-off custom items.
   scale_name          text,
+  scale_name_kr       text,
+  scale_name_en       text,
   -- 1-based position within that scale (for reverse-scoring & scoring scripts).
   position_in_scale   integer,
-  -- When true, invert the coded value before summing (e.g. PSS-10 items 4,5,7,8).
+  -- When true, invert the coded value before summing.
   reverse_scored      boolean not null default false,
   -- Optional subscale label within a multi-factor instrument.
   subscale            text,
 
   -- Provenance: same shape whether from a validated library or hand-built.
   source              public.item_source not null default 'custom',
-  -- e.g. 'pss-10' when source = validated_scale; null for custom.
-  source_scale_id     text,
+  -- e.g. 'swls' when source = validated_scale; null for custom.
+  source_scale_id     text references public.instruments (scale_id),
 
   created_at          timestamptz not null default now(),
 
@@ -158,6 +216,7 @@ create table public.survey_items (
 
 create index survey_items_survey_id_idx on public.survey_items (survey_id);
 create index survey_items_scale_name_idx on public.survey_items (scale_name);
+create index survey_items_source_scale_id_idx on public.survey_items (source_scale_id);
 
 comment on table public.survey_items is
   'Survey questions with response coding and research export metadata.';
@@ -165,6 +224,10 @@ comment on column public.survey_items.variable_name is
   'Stable export column name; unique per survey.';
 comment on column public.survey_items.reverse_scored is
   'If true, invert numeric coding before scale scoring.';
+comment on column public.survey_items.item_text_kr is
+  'Korean item wording (default administered language).';
+comment on column public.survey_items.item_text_en is
+  'English item wording (original / alternate language).';
 
 -- ---------------------------------------------------------------------------
 -- prompts (scheduled administrations)
@@ -331,6 +394,16 @@ alter table public.survey_items enable row level security;
 alter table public.prompts enable row level security;
 alter table public.prompt_occasions enable row level security;
 alter table public.responses enable row level security;
+alter table public.instruments enable row level security;
+alter table public.instrument_items enable row level security;
+
+-- Validated scale library is readable by everyone (needed for researcher picker
+-- and for documenting administered wording). Writes happen via seed/SQL only.
+create policy "Public read instruments"
+  on public.instruments for select using (true);
+
+create policy "Public read instrument_items"
+  on public.instrument_items for select using (true);
 
 -- Owner can manage their studies.
 create policy "Owners manage studies"

@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { VALIDATED_SCALES } from '../../data/scales'
+import {
+  VALIDATED_SCALES,
+  itemTextForLocale,
+} from '../../data/scales'
 import {
   addCustomItem,
   addValidatedScaleItems,
@@ -10,7 +13,12 @@ import {
   listOccasions,
   listPrompts,
 } from '../../lib/api'
-import type { ItemType, Survey, SurveyItem } from '../../types/database'
+import type {
+  ContentLocale,
+  ItemType,
+  Survey,
+  SurveyItem,
+} from '../../types/database'
 
 const ITEM_TYPES: { value: ItemType; label: string }[] = [
   { value: 'likert', label: 'Likert' },
@@ -22,11 +30,11 @@ const ITEM_TYPES: { value: ItemType; label: string }[] = [
 ]
 
 const defaultLikertOptions = [
-  { label: 'Strongly disagree', value: 1 },
-  { label: 'Disagree', value: 2 },
-  { label: 'Neutral', value: 3 },
-  { label: 'Agree', value: 4 },
-  { label: 'Strongly agree', value: 5 },
+  { label: '전혀 동의하지 않는다', label_kr: '전혀 동의하지 않는다', label_en: 'Strongly disagree', value: 1 },
+  { label: '동의하지 않는다', label_kr: '동의하지 않는다', label_en: 'Disagree', value: 2 },
+  { label: '중립', label_kr: '중립', label_en: 'Neutral', value: 3 },
+  { label: '동의한다', label_kr: '동의한다', label_en: 'Agree', value: 4 },
+  { label: '매우 동의한다', label_kr: '매우 동의한다', label_en: 'Strongly agree', value: 5 },
 ]
 
 export function SurveyEditorPage() {
@@ -36,9 +44,12 @@ export function SurveyEditorPage() {
   const [occasionCount, setOccasionCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [locale, setLocale] = useState<ContentLocale>('ko')
+  const [pickerQuery, setPickerQuery] = useState('')
 
   // Custom item form
   const [itemText, setItemText] = useState('')
+  const [itemTextEn, setItemTextEn] = useState('')
   const [variableName, setVariableName] = useState('')
   const [itemType, setItemType] = useState<ItemType>('likert')
   const [scaleName, setScaleName] = useState('')
@@ -91,6 +102,8 @@ export function SurveyEditorPage() {
       if (itemType !== 'open_text' && itemType !== 'visual_analog') {
         response_options = JSON.parse(optionsJson) as {
           label: string
+          label_kr?: string
+          label_en?: string
           value: number
         }[]
       }
@@ -99,6 +112,8 @@ export function SurveyEditorPage() {
         survey_id: surveyId,
         item_type: itemType,
         item_text: itemText.trim(),
+        item_text_kr: itemText.trim(),
+        item_text_en: itemTextEn.trim() || null,
         variable_name: variableName.trim(),
         response_options,
         scale_name: scaleName.trim() || null,
@@ -119,6 +134,7 @@ export function SurveyEditorPage() {
       })
 
       setItemText('')
+      setItemTextEn('')
       setVariableName('')
       setScaleName('')
       setPositionInScale('')
@@ -146,6 +162,18 @@ export function SurveyEditorPage() {
     }
   }
 
+  const filteredScales = VALIDATED_SCALES.filter((scale) => {
+    const q = pickerQuery.trim().toLowerCase()
+    if (!q) return true
+    return (
+      scale.id.toLowerCase().includes(q) ||
+      scale.shortName.toLowerCase().includes(q) ||
+      scale.name_en.toLowerCase().includes(q) ||
+      scale.name_kr.includes(pickerQuery.trim()) ||
+      scale.source.toLowerCase().includes(q)
+    )
+  })
+
   if (!survey) {
     return <p className="text-sm text-ink-soft">Loading survey…</p>
   }
@@ -166,7 +194,7 @@ export function SurveyEditorPage() {
           {items.length} items · {occasionCount} scheduled occasions
         </p>
         {survey.instructions && (
-          <p className="mt-3 rounded-xl border border-sand/70 bg-white/50 px-3 py-2 text-sm text-ink-soft">
+          <p className="mt-3 whitespace-pre-wrap rounded-xl border border-sand/70 bg-white/50 px-3 py-2 text-sm text-ink-soft">
             {survey.instructions}
           </p>
         )}
@@ -179,55 +207,98 @@ export function SurveyEditorPage() {
       )}
 
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5">
-        <h3 className="font-display text-lg font-semibold text-sea-deep">
-          Add validated scale
-        </h3>
-        <p className="mt-1 text-sm text-ink-soft">
-          Pre-fills items with variable names, anchors, and reverse-scoring flags.
-        </p>
-        <ul className="mt-4 space-y-3">
-          {VALIDATED_SCALES.map((scale) => (
-            <li
-              key={scale.id}
-              className="flex flex-col gap-3 rounded-xl border border-sand/70 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-semibold text-sea-deep">
-                  {scale.shortName}{' '}
-                  <span className="font-normal text-ink-soft">— {scale.fullName}</span>
-                </p>
-                <p className="mt-1 text-xs text-ink-soft">
-                  {scale.items.length} items · reverse-scored:{' '}
-                  {scale.items
-                    .filter((i) => i.reverseScored)
-                    .map((i) => i.position)
-                    .join(', ') || 'none'}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleAddScale(scale.id)}
-                className="rounded-xl bg-sea px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold text-sea-deep">
+              Choose from validated scales
+            </h3>
+            <p className="mt-1 text-sm text-ink-soft">
+              Selecting a scale pre-fills all items (variable names, reverse
+              flags, subscales, bilingual text). Mix freely with custom items.
+            </p>
+          </div>
+          <label className="block text-sm">
+            <span className="sr-only">Search scales</span>
+            <input
+              value={pickerQuery}
+              onChange={(e) => setPickerQuery(e.target.value)}
+              placeholder="Search 8 scales…"
+              className="w-48 rounded-xl border border-sand bg-white px-3 py-2 text-sm outline-none focus:border-sea/40"
+            />
+          </label>
+        </div>
+
+        <ul className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+          {filteredScales.map((scale) => {
+            const reversePositions = scale.items
+              .filter((i) => i.reverseScored)
+              .map((i) => i.position)
+            const alreadyAdded = items.some((i) => i.source_scale_id === scale.id)
+            return (
+              <li
+                key={scale.id}
+                className="rounded-xl border border-sand/70 bg-white/70 p-4"
               >
-                Add {scale.shortName}
-              </button>
-            </li>
-          ))}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sea-deep">{scale.name_kr}</p>
+                    <p className="mt-0.5 text-sm text-ink-soft">{scale.name_en}</p>
+                    <p className="mt-2 text-xs text-ink-soft">
+                      <span className="font-mono">{scale.id}</span>
+                      {' · '}
+                      {scale.items.length} items · {scale.responseScale.points}-point
+                      {' · '}
+                      reverse:{' '}
+                      {reversePositions.length > 0
+                        ? reversePositions.join(', ')
+                        : 'none'}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-soft/90">{scale.source}</p>
+                    {!scale.responseScale.verified && (
+                      <p className="mt-1 text-[11px] text-warn">
+                        Anchors unverified — confirm lab protocol before data collection.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy || alreadyAdded}
+                    onClick={() => void handleAddScale(scale.id)}
+                    className="shrink-0 rounded-xl bg-sea px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-45"
+                  >
+                    {alreadyAdded ? 'Added' : `Add ${scale.shortName}`}
+                  </button>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       </section>
 
       <section className="rounded-2xl border border-sand/80 bg-white/55 p-5">
         <h3 className="font-display text-lg font-semibold text-sea-deep">
-          Add custom item
+          Create a custom item manually
         </h3>
         <form onSubmit={handleAddCustom} className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block text-sm sm:col-span-2">
-            <span className="mb-1 block font-medium text-sea-deep">Item text</span>
+            <span className="mb-1 block font-medium text-sea-deep">
+              Item text (Korean / default)
+            </span>
             <textarea
               value={itemText}
               onChange={(e) => setItemText(e.target.value)}
               required
+              rows={2}
+              className="w-full rounded-xl border border-sand bg-white px-3 py-2 outline-none focus:border-sea/40"
+            />
+          </label>
+          <label className="block text-sm sm:col-span-2">
+            <span className="mb-1 block font-medium text-sea-deep">
+              Item text (English, optional)
+            </span>
+            <textarea
+              value={itemTextEn}
+              onChange={(e) => setItemTextEn(e.target.value)}
               rows={2}
               className="w-full rounded-xl border border-sand bg-white px-3 py-2 outline-none focus:border-sea/40"
             />
@@ -297,12 +368,12 @@ export function SurveyEditorPage() {
           {itemType !== 'open_text' && itemType !== 'visual_analog' && (
             <label className="block text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-sea-deep">
-                response_options (JSON: label + numeric value)
+                response_options (JSON: label / label_kr / label_en + value)
               </span>
               <textarea
                 value={optionsJson}
                 onChange={(e) => setOptionsJson(e.target.value)}
-                rows={6}
+                rows={8}
                 className="w-full rounded-xl border border-sand bg-white px-3 py-2 font-mono text-xs outline-none focus:border-sea/40"
               />
             </label>
@@ -320,50 +391,100 @@ export function SurveyEditorPage() {
       </section>
 
       <section>
-        <h3 className="font-display text-lg font-semibold text-sea-deep">Items</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-display text-lg font-semibold text-sea-deep">Items</h3>
+          <div
+            className="inline-flex rounded-xl border border-sand bg-white/70 p-0.5 text-xs font-semibold"
+            role="group"
+            aria-label="Item language"
+          >
+            <button
+              type="button"
+              onClick={() => setLocale('ko')}
+              className={[
+                'rounded-[10px] px-3 py-1.5 transition',
+                locale === 'ko' ? 'bg-sea text-white' : 'text-ink-soft',
+              ].join(' ')}
+            >
+              한국어
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale('en')}
+              className={[
+                'rounded-[10px] px-3 py-1.5 transition',
+                locale === 'en' ? 'bg-sea text-white' : 'text-ink-soft',
+              ].join(' ')}
+            >
+              English
+            </button>
+          </div>
+        </div>
+
         {items.length === 0 ? (
           <p className="mt-3 text-sm text-ink-soft">
-            No items yet. Add PSS-10 or a custom item above.
+            No items yet. Choose a validated scale or add a custom item above.
           </p>
         ) : (
           <ol className="mt-3 space-y-2">
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className="rounded-2xl border border-sand/80 bg-white/60 px-4 py-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium leading-snug text-sea-deep">
-                      <span className="mr-2 text-ink-soft">{item.display_order}.</span>
-                      {item.item_text}
-                    </p>
-                    <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-ink-soft">
-                      <span>{item.variable_name}</span>
-                      <span>{item.item_type}</span>
-                      {item.scale_name && <span>{item.scale_name}</span>}
-                      {item.position_in_scale != null && (
-                        <span>pos {item.position_in_scale}</span>
+            {items.map((item) => {
+              const primary = itemTextForLocale(item, locale)
+              const secondary =
+                locale === 'ko'
+                  ? item.item_text_en
+                  : item.item_text_kr || item.item_text
+              return (
+                <li
+                  key={item.id}
+                  className="rounded-2xl border border-sand/80 bg-white/60 px-4 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium leading-snug text-sea-deep">
+                        <span className="mr-2 text-ink-soft">{item.display_order}.</span>
+                        {primary}
+                      </p>
+                      {secondary && secondary !== primary && (
+                        <p className="mt-1 text-xs leading-snug text-ink-soft">
+                          {secondary}
+                        </p>
                       )}
-                      {item.reverse_scored && (
-                        <span className="font-sans font-semibold text-warn">
-                          reverse
-                        </span>
-                      )}
-                      <span className="font-sans">{item.source}</span>
-                    </p>
+                      <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-ink-soft">
+                        <span>{item.variable_name}</span>
+                        <span>{item.item_type}</span>
+                        {(locale === 'ko'
+                          ? item.scale_name_kr || item.scale_name
+                          : item.scale_name_en || item.scale_name) && (
+                          <span>
+                            {locale === 'ko'
+                              ? item.scale_name_kr || item.scale_name
+                              : item.scale_name_en || item.scale_name}
+                          </span>
+                        )}
+                        {item.position_in_scale != null && (
+                          <span>pos {item.position_in_scale}</span>
+                        )}
+                        {item.subscale && <span>{item.subscale}</span>}
+                        {item.reverse_scored && (
+                          <span className="font-sans font-semibold text-warn">
+                            reverse
+                          </span>
+                        )}
+                        <span className="font-sans">{item.source}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void handleDelete(item.id)}
+                      className="shrink-0 text-xs text-ink-soft hover:text-warn"
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleDelete(item.id)}
-                    className="shrink-0 text-xs text-ink-soft hover:text-warn"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ol>
         )}
       </section>

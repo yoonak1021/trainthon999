@@ -1,5 +1,6 @@
 import { useEffect, useState, useTransition } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { BilingualItemText } from '../../components/participant/BilingualItemText'
 import { ItemRenderer } from '../../components/participant/ItemRenderer'
 import { isAnswerComplete } from '../../components/participant/answerUtils'
 import { ProgressBar } from '../../components/participant/ProgressBar'
@@ -10,6 +11,7 @@ import {
 } from '../../lib/api'
 import type {
   AnswerInput,
+  ContentLocale,
   Participant,
   PromptOccasion,
   Survey,
@@ -39,6 +41,7 @@ export function SurveyTakePage() {
   const [saving, setSaving] = useState(false)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [animKey, setAnimKey] = useState(0)
+  const [locale, setLocale] = useState<ContentLocale>('ko')
   const [, startTransition] = useTransition()
 
   useEffect(() => {
@@ -205,9 +208,37 @@ export function SurveyTakePage() {
           <p className="truncate text-xs font-medium text-ink-soft">
             {session.occasion.label ?? `Wave ${session.occasion.occasion_index}`}
           </p>
-          <p className="text-xs font-semibold tracking-wide text-sea-deep">
-            {session.participant.participant_code}
-          </p>
+          <div className="flex items-center gap-2">
+            <div
+              className="inline-flex rounded-lg border border-sand bg-white/70 p-0.5 text-[11px] font-semibold"
+              role="group"
+              aria-label="Language"
+            >
+              <button
+                type="button"
+                onClick={() => setLocale('ko')}
+                className={[
+                  'rounded-md px-2 py-1 transition',
+                  locale === 'ko' ? 'bg-sea text-white' : 'text-ink-soft',
+                ].join(' ')}
+              >
+                한
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocale('en')}
+                className={[
+                  'rounded-md px-2 py-1 transition',
+                  locale === 'en' ? 'bg-sea text-white' : 'text-ink-soft',
+                ].join(' ')}
+              >
+                EN
+              </button>
+            </div>
+            <p className="text-xs font-semibold tracking-wide text-sea-deep">
+              {session.participant.participant_code}
+            </p>
+          </div>
         </div>
         <ProgressBar current={index + 1} total={total} />
       </header>
@@ -220,17 +251,16 @@ export function SurveyTakePage() {
         ].join(' ')}
       >
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-sea/80">
-          Question {index + 1}
+          {locale === 'ko' ? `문항 ${index + 1}` : `Question ${index + 1}`}
         </p>
-        <h2 className="font-display text-[1.45rem] font-semibold leading-snug text-sea-deep sm:text-[1.6rem]">
-          {item.item_text}
-        </h2>
+        <BilingualItemText item={item} locale={locale} />
 
         <div className="mt-8">
           <ItemRenderer
             item={item}
             answer={currentAnswer}
             onAnswer={(a) => setAnswer(item.id, a)}
+            locale={locale}
           />
         </div>
       </main>

@@ -1,4 +1,5 @@
-import type { AnswerInput, SurveyItem } from '../../types/database'
+import type { AnswerInput, ContentLocale, SurveyItem } from '../../types/database'
+import { localizedItemView } from './BilingualItemText'
 import { LikertControl } from './LikertControl'
 import { OpenTextControl } from './OpenTextControl'
 import { SliderControl } from './SliderControl'
@@ -7,10 +8,17 @@ type ItemRendererProps = {
   item: SurveyItem
   answer: AnswerInput | undefined
   onAnswer: (answer: AnswerInput) => void
+  locale?: ContentLocale
 }
 
-export function ItemRenderer({ item, answer, onAnswer }: ItemRendererProps) {
-  const options = item.response_options ?? []
+export function ItemRenderer({
+  item,
+  answer,
+  onAnswer,
+  locale = 'ko',
+}: ItemRendererProps) {
+  const view = localizedItemView(item, locale)
+  const options = view.options
 
   switch (item.item_type) {
     case 'likert':
@@ -20,8 +28,8 @@ export function ItemRenderer({ item, answer, onAnswer }: ItemRendererProps) {
           options={options}
           value={answer?.numeric_value ?? null}
           onChange={(value) => onAnswer({ numeric_value: value })}
-          leftAnchor={item.left_anchor}
-          rightAnchor={item.right_anchor}
+          leftAnchor={view.leftAnchor}
+          rightAnchor={view.rightAnchor}
         />
       )
 
@@ -33,8 +41,8 @@ export function ItemRenderer({ item, answer, onAnswer }: ItemRendererProps) {
           step={item.step_value ?? 1}
           value={answer?.numeric_value ?? null}
           onChange={(value) => onAnswer({ numeric_value: value })}
-          leftAnchor={item.left_anchor}
-          rightAnchor={item.right_anchor}
+          leftAnchor={view.leftAnchor}
+          rightAnchor={view.rightAnchor}
           discrete
         />
       )
@@ -47,8 +55,8 @@ export function ItemRenderer({ item, answer, onAnswer }: ItemRendererProps) {
           step={item.step_value ?? 1}
           value={answer?.numeric_value ?? null}
           onChange={(value) => onAnswer({ numeric_value: value })}
-          leftAnchor={item.left_anchor}
-          rightAnchor={item.right_anchor}
+          leftAnchor={view.leftAnchor}
+          rightAnchor={view.rightAnchor}
         />
       )
 
