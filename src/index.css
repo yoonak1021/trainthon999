@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Source Serif 4", ui-serif, Georgia, serif;
+
+  --color-ink: #102a2c;
+  --color-ink-soft: #3a5557;
+  --color-mist: #e7f1ef;
+  --color-paper: #f4f8f7;
+  --color-sea: #1f6f6a;
+  --color-sea-deep: #0f3d3e;
+  --color-sea-bright: #2f9a90;
+  --color-sand: #d8e4e1;
+  --color-warn: #9a5b2f;
+  --color-warn-bg: #f8efe6;
+  --color-danger-soft: #f7e9e7;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background:
+      radial-gradient(ellipse 900px 480px at 10% -10%, rgba(47, 154, 144, 0.16), transparent 60%),
+      radial-gradient(ellipse 700px 420px at 100% 0%, rgba(15, 61, 62, 0.1), transparent 55%),
+      linear-gradient(180deg, #eef5f3 0%, var(--color-paper) 42%, #e9f0ee 100%);
+    background-attachment: fixed;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    background-image:
+      linear-gradient(rgba(15, 61, 62, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 61, 62, 0.03) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 85%);
+  }
+
+  #root {
+    position: relative;
+    min-height: 100dvh;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .animate-rise {
+    animation: rise 0.45s ease-out both;
+  }
+
+  .animate-fade {
+    animation: fade 0.35s ease-out both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-fade {
+    animation: none;
+  }
+}
