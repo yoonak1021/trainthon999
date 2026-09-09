@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LocaleProvider } from './context/LocaleContext'
 import { HomePage } from './pages/HomePage'
+import { FlowSlide } from './pages/FlowSlide'
 import { ParticipantEntryPage } from './pages/participant/ParticipantEntryPage'
 import { SurveyCompletePage } from './pages/participant/SurveyCompletePage'
 import { SurveyTakePage } from './pages/participant/SurveyTakePage'
@@ -16,6 +17,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/flow-slide" element={<FlowSlide />} />
 
           {/* Participant — mobile-first survey taking */}
           <Route path="/p" element={<ParticipantEntryPage />} />
