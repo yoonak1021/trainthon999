@@ -1,0 +1,111 @@
+variable,kind,scale,subscale,reverse_scored,response_range,feeds_into,item_text_en,source
+dpes_awe_1,item,dpes_awe,,no,1-7,dpes_awe_total,I often feel awe.,"Shiota, Keltner, & John (2006)"
+dpes_awe_2,item,dpes_awe,,no,1-7,dpes_awe_total,I see beauty all around me.,"Shiota, Keltner, & John (2006)"
+dpes_awe_3,item,dpes_awe,,no,1-7,dpes_awe_total,I feel wonder almost every day.,"Shiota, Keltner, & John (2006)"
+dpes_awe_4,item,dpes_awe,,no,1-7,dpes_awe_total,I often look for patterns in the objects around me.,"Shiota, Keltner, & John (2006)"
+dpes_awe_5,item,dpes_awe,,no,1-7,dpes_awe_total,I have many opportunities to see the beauty of nature.,"Shiota, Keltner, & John (2006)"
+dpes_awe_6,item,dpes_awe,,no,1-7,dpes_awe_total,I seek out experiences that challenge my understanding of the world.,"Shiota, Keltner, & John (2006)"
+dpes_awe_total,scored,dpes_awe,,,,,MEAN of 6 items,"Shiota, Keltner, & John (2006)"
+tipi_1,item,tipi,extraversion,no,1-7,tipi_extraversion,"Extraverted, enthusiastic.","Gosling, Rentfrow, & Swann (2003)"
+tipi_2_r,item,tipi,agreeableness,yes,1-7,tipi_agreeableness,"Critical, quarrelsome.","Gosling, Rentfrow, & Swann (2003)"
+tipi_3,item,tipi,conscientiousness,no,1-7,tipi_conscientiousness,"Dependable, self-disciplined.","Gosling, Rentfrow, & Swann (2003)"
+tipi_4_r,item,tipi,emotional_stability,yes,1-7,tipi_emotional_stability,"Anxious, easily upset.","Gosling, Rentfrow, & Swann (2003)"
+tipi_5,item,tipi,openness,no,1-7,tipi_openness,"Open to new experiences, complex.","Gosling, Rentfrow, & Swann (2003)"
+tipi_6_r,item,tipi,extraversion,yes,1-7,tipi_extraversion,"Reserved, quiet.","Gosling, Rentfrow, & Swann (2003)"
+tipi_7,item,tipi,agreeableness,no,1-7,tipi_agreeableness,"Sympathetic, warm.","Gosling, Rentfrow, & Swann (2003)"
+tipi_8_r,item,tipi,conscientiousness,yes,1-7,tipi_conscientiousness,"Disorganized, careless.","Gosling, Rentfrow, & Swann (2003)"
+tipi_9,item,tipi,emotional_stability,no,1-7,tipi_emotional_stability,"Calm, emotionally stable.","Gosling, Rentfrow, & Swann (2003)"
+tipi_10_r,item,tipi,openness,yes,1-7,tipi_openness,"Conventional, uncreative.","Gosling, Rentfrow, & Swann (2003)"
+tipi_extraversion,scored,tipi,,,,,MEAN of 2 items,"Gosling, Rentfrow, & Swann (2003)"
+tipi_agreeableness,scored,tipi,,,,,MEAN of 2 items,"Gosling, Rentfrow, & Swann (2003)"
+tipi_conscientiousness,scored,tipi,,,,,MEAN of 2 items,"Gosling, Rentfrow, & Swann (2003)"
+tipi_emotional_stability,scored,tipi,,,,,MEAN of 2 items,"Gosling, Rentfrow, & Swann (2003)"
+tipi_openness,scored,tipi,,,,,MEAN of 2 items,"Gosling, Rentfrow, & Swann (2003)"
+swls_1,item,swls,,no,1-7,swls_total,In most ways my life is close to my ideal.,"Diener, Emmons, Larsen, & Griffin (1985)"
+swls_2,item,swls,,no,1-7,swls_total,The conditions of my life are excellent.,"Diener, Emmons, Larsen, & Griffin (1985)"
+swls_3,item,swls,,no,1-7,swls_total,I am satisfied with my life.,"Diener, Emmons, Larsen, & Griffin (1985)"
+swls_4,item,swls,,no,1-7,swls_total,So far I have gotten the important things I want in life.,"Diener, Emmons, Larsen, & Griffin (1985)"
+swls_5,item,swls,,no,1-7,swls_total,"If I could live my life over, I would change almost nothing.","Diener, Emmons, Larsen, & Griffin (1985)"
+swls_total,scored,swls,,,,,SUM of 5 items,"Diener, Emmons, Larsen, & Griffin (1985)"
+prlq_1,item,prlq,,no,1-7,prlq_total,My life has been psychologically rich.,Oishi et al. (2019)
+prlq_2,item,prlq,,no,1-7,prlq_total,My life has been experientially rich.,Oishi et al. (2019)
+prlq_3,item,prlq,,no,1-7,prlq_total,My life has been emotionally rich.,Oishi et al. (2019)
+prlq_4,item,prlq,,no,1-7,prlq_total,I have had a lot of interesting experiences.,Oishi et al. (2019)
+prlq_5,item,prlq,,no,1-7,prlq_total,I have had a lot of novel experiences.,Oishi et al. (2019)
+prlq_6,item,prlq,,no,1-7,prlq_total,"My life has been full of unique, unusual experiences.",Oishi et al. (2019)
+prlq_7,item,prlq,,no,1-7,prlq_total,"My life consists of rich, intense moments.",Oishi et al. (2019)
+prlq_8,item,prlq,,no,1-7,prlq_total,I experience a full range of emotions via first-hand experiences such as travel and attending concerts.,Oishi et al. (2019)
+prlq_9,item,prlq,,no,1-7,prlq_total,I have a lot of personal stories to tell others.,Oishi et al. (2019)
+prlq_10,item,prlq,,no,1-7,prlq_total,"On my deathbed, I am likely to say ""I had an interesting life"".",Oishi et al. (2019)
+prlq_11,item,prlq,,no,1-7,prlq_total,"On my deathbed, I am likely to say ""I have seen and learned a lot"".",Oishi et al. (2019)
+prlq_12,item,prlq,,no,1-7,prlq_total,My life would make a good novel or movie.,Oishi et al. (2019)
+prlq_total,scored,prlq,,,,,MEAN of 12 items,Oishi et al. (2019)
+spane_pos_1,item,spane,positive,no,1-5,spane_p,Positive,Diener et al. (2010)
+spane_neg_1,item,spane,negative,no,1-5,spane_n,Negative,Diener et al. (2010)
+spane_pos_2,item,spane,positive,no,1-5,spane_p,Good,Diener et al. (2010)
+spane_pos_3,item,spane,positive,no,1-5,spane_p,Pleasant,Diener et al. (2010)
+spane_pos_4,item,spane,positive,no,1-5,spane_p,Happy,Diener et al. (2010)
+spane_pos_5,item,spane,positive,no,1-5,spane_p,Joyful,Diener et al. (2010)
+spane_pos_6,item,spane,positive,no,1-5,spane_p,Contented,Diener et al. (2010)
+spane_neg_2,item,spane,negative,no,1-5,spane_n,Bad,Diener et al. (2010)
+spane_neg_3,item,spane,negative,no,1-5,spane_n,Unpleasant,Diener et al. (2010)
+spane_neg_4,item,spane,negative,no,1-5,spane_n,Sad,Diener et al. (2010)
+spane_neg_5,item,spane,negative,no,1-5,spane_n,Afraid,Diener et al. (2010)
+spane_neg_6,item,spane,negative,no,1-5,spane_n,Angry,Diener et al. (2010)
+spane_p,scored,spane,,,,,SUM of 6 items,Diener et al. (2010)
+spane_n,scored,spane,,,,,SUM of 6 items,Diener et al. (2010)
+spane_balance,scored,spane,,,,,derived score,Diener et al. (2010)
+mvs_ss_1,item,mvs,success,no,1-5,mvs_success; mvs_total,"I admire people who own expensive homes, cars, and clothes.",Richins (2004); original: Richins & Dawson (1992)
+mvs_ss_2,item,mvs,success,no,1-5,mvs_success; mvs_total,Some of the most important achievements in life include acquiring material possessions.,Richins (2004); original: Richins & Dawson (1992)
+mvs_ss_3_r,item,mvs,success,yes,1-5,mvs_success; mvs_total,I don't place much emphasis on the amount of material objects people own as a sign of success.,Richins (2004); original: Richins & Dawson (1992)
+mvs_ss_4,item,mvs,success,no,1-5,mvs_success; mvs_total,The things I own say a lot about how well I'm doing in life.,Richins (2004); original: Richins & Dawson (1992)
+mvs_ss_5,item,mvs,success,no,1-5,mvs_success; mvs_total,I like to own things that impress people.,Richins (2004); original: Richins & Dawson (1992)
+mvs_ss_6_r,item,mvs,success,yes,1-5,mvs_success; mvs_total,I don't pay much attention to the material objects other people own.,Richins (2004); original: Richins & Dawson (1992)
+mvs_c_1_r,item,mvs,centrality,yes,1-5,mvs_centrality; mvs_total,I usually buy only the things I need.,Richins (2004); original: Richins & Dawson (1992)
+mvs_c_2_r,item,mvs,centrality,yes,1-5,mvs_centrality; mvs_total,"I try to keep my life simple, as far as possessions are concerned.",Richins (2004); original: Richins & Dawson (1992)
+mvs_c_3_r,item,mvs,centrality,yes,1-5,mvs_centrality; mvs_total,The things I own aren't all that important to me.,Richins (2004); original: Richins & Dawson (1992)
+mvs_c_4,item,mvs,centrality,no,1-5,mvs_centrality; mvs_total,I enjoy spending money on things that aren't practical.,Richins (2004); original: Richins & Dawson (1992)
+mvs_c_5,item,mvs,centrality,no,1-5,mvs_centrality; mvs_total,Buying things gives me a lot of pleasure.,Richins (2004); original: Richins & Dawson (1992)
+mvs_c_6,item,mvs,centrality,no,1-5,mvs_centrality; mvs_total,I like a lot of luxury in my life.,Richins (2004); original: Richins & Dawson (1992)
+mvs_c_7_r,item,mvs,centrality,yes,1-5,mvs_centrality; mvs_total,I put less emphasis on material things than most people I know.,Richins (2004); original: Richins & Dawson (1992)
+mvs_h_1_r,item,mvs,happiness,yes,1-5,mvs_happiness; mvs_total,I have all the things I really need to enjoy life.,Richins (2004); original: Richins & Dawson (1992)
+mvs_h_2,item,mvs,happiness,no,1-5,mvs_happiness; mvs_total,My life would be better if I owned certain things I don't have.,Richins (2004); original: Richins & Dawson (1992)
+mvs_h_3_r,item,mvs,happiness,yes,1-5,mvs_happiness; mvs_total,I wouldn't be any happier if I owned nicer things.,Richins (2004); original: Richins & Dawson (1992)
+mvs_h_4,item,mvs,happiness,no,1-5,mvs_happiness; mvs_total,I'd be happier if I could afford to buy more things.,Richins (2004); original: Richins & Dawson (1992)
+mvs_h_5,item,mvs,happiness,no,1-5,mvs_happiness; mvs_total,It sometimes bothers me quite a bit that I can't afford to buy all the things I'd like.,Richins (2004); original: Richins & Dawson (1992)
+mvs_success,scored,mvs,,,,,MEAN of 6 items,Richins (2004); original: Richins & Dawson (1992)
+mvs_centrality,scored,mvs,,,,,MEAN of 7 items,Richins (2004); original: Richins & Dawson (1992)
+mvs_happiness,scored,mvs,,,,,MEAN of 5 items,Richins (2004); original: Richins & Dawson (1992)
+mvs_total,scored,mvs,,,,,MEAN of 18 items,Richins (2004); original: Richins & Dawson (1992)
+smallself_1,item,small_pes,small_self,no,1-7,small_self,"In general, I feel relatively small.",Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+smallself_2,item,small_pes,small_self,no,1-7,small_self,"In general, I feel insignificant.",Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_1,item,small_pes,entitlement,no,1-7,pes_total,I honestly feel I am just more deserving than others.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_2,item,small_pes,entitlement,no,1-7,pes_total,Great things should come to me.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_3,item,small_pes,entitlement,no,1-7,pes_total,"If I were on the Titanic, I would deserve to be on the first lifeboat!",Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_4,item,small_pes,entitlement,no,1-7,pes_total,I demand the best because I am worth it.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_5_r,item,small_pes,entitlement,yes,1-7,pes_total,I do not necessarily deserve special treatment.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_6,item,small_pes,entitlement,no,1-7,pes_total,I deserve more things in my life.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_7,item,small_pes,entitlement,no,1-7,pes_total,People like me deserve an extra break now and then.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_8,item,small_pes,entitlement,no,1-7,pes_total,Things should go my way.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_9,item,small_pes,entitlement,no,1-7,pes_total,I feel entitled to more of everything.,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+small_self,scored,small_pes,,,,,MEAN of 2 items,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+pes_total,scored,small_pes,,,,,MEAN of 9 items,Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)
+awe_sf_1,item,awe_sf,time_perception,no,1-7,awe_time_perception; awe_total,I sensed things momentarily slow down.,Yaden et al. (2019)
+awe_sf_2,item,awe_sf,time_perception,no,1-7,awe_time_perception; awe_total,I noticed time slowing.,Yaden et al. (2019)
+awe_sf_3,item,awe_sf,self_diminishment,no,1-7,awe_self_diminishment; awe_total,I felt my sense of self was diminished.,Yaden et al. (2019)
+awe_sf_4,item,awe_sf,self_diminishment,no,1-7,awe_self_diminishment; awe_total,I felt my sense of self shrink.,Yaden et al. (2019)
+awe_sf_5,item,awe_sf,connectedness,no,1-7,awe_connectedness; awe_total,I had the sense of being connected to everything.,Yaden et al. (2019)
+awe_sf_6,item,awe_sf,connectedness,no,1-7,awe_connectedness; awe_total,I felt a sense of communion with all living things.,Yaden et al. (2019)
+awe_sf_7,item,awe_sf,vastness,no,1-7,awe_vastness; awe_total,I felt that I was in the presence of something grand.,Yaden et al. (2019)
+awe_sf_8,item,awe_sf,vastness,no,1-7,awe_vastness; awe_total,I experienced something greater than myself.,Yaden et al. (2019)
+awe_sf_9,item,awe_sf,physical_sensations,no,1-7,awe_physical_sensations; awe_total,I felt my jaw drop.,Yaden et al. (2019)
+awe_sf_10,item,awe_sf,physical_sensations,no,1-7,awe_physical_sensations; awe_total,I had goosebumps.,Yaden et al. (2019)
+awe_sf_11,item,awe_sf,need_for_accommodation,no,1-7,awe_need_for_accommodation; awe_total,I felt challenged to mentally process what I was experiencing.,Yaden et al. (2019)
+awe_sf_12,item,awe_sf,need_for_accommodation,no,1-7,awe_need_for_accommodation; awe_total,I found it hard to comprehend the experience in full.,Yaden et al. (2019)
+awe_time_perception,scored,awe_sf,,,,,MEAN of 2 items,Yaden et al. (2019)
+awe_self_diminishment,scored,awe_sf,,,,,MEAN of 2 items,Yaden et al. (2019)
+awe_connectedness,scored,awe_sf,,,,,MEAN of 2 items,Yaden et al. (2019)
+awe_vastness,scored,awe_sf,,,,,MEAN of 2 items,Yaden et al. (2019)
+awe_physical_sensations,scored,awe_sf,,,,,MEAN of 2 items,Yaden et al. (2019)
+awe_need_for_accommodation,scored,awe_sf,,,,,MEAN of 2 items,Yaden et al. (2019)
+awe_total,scored,awe_sf,,,,,MEAN of 12 items,Yaden et al. (2019)
