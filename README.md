@@ -19,8 +19,10 @@ Mobile-first longitudinal survey platform for psychology research — an alterna
 
 ### Researcher view
 - Create studies and surveys
-- Add items from a validated scale (**PSS-10** hardcoded) or as custom items with export fields (`variable_name`, `scale_name`, `position_in_scale`, `reverse_scored`, `subscale`)
-- View / CSV-export collected responses
+- Add items from **8 validated scales** (bilingual KR/EN) or as custom items with export fields
+- View collected data with `scoreAll()` scored table
+- Export **Raw data**, **Scored data**, and **codebook** CSVs
+- Edit per-scale protocol settings: response min/max, aggregation, missing-data rule
 
 ## Database
 
