@@ -63,6 +63,51 @@ npm run preview
 npm run lint
 ```
 
+## Deploy (Vercel + GitHub)
+
+The GitHub repo is already public: [yoonak1021/trainthon999](https://github.com/yoonak1021/trainthon999).
+
+Vercel cannot be connected from this environment (no Vercel account token). After you link the repo once in the Vercel dashboard, every push deploys automatically.
+
+### 1. Connect GitHub → Vercel
+
+1. Open [vercel.com/new](https://vercel.com/new) and sign in with **Continue with GitHub**.
+2. Grant access to `yoonak1021/trainthon999` (or the whole account).
+3. **Import** `trainthon999`.
+4. Confirm the detected settings (also stored in `vercel.json`):
+   - Framework: **Vite**
+   - Build command: `npm run build`
+   - Output directory: `dist`
+5. Environment variables — **optional**. Leave them empty to run **demo mode** (`DEMO01`). To use a live Supabase project, add:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+6. Click **Deploy**.
+
+### 2. Use this branch as Production (important)
+
+`main` is still the initial commit. The working app lives on `cursor/survey-scale-builder-e78f` (this PR).
+
+In the Vercel project: **Settings → Git → Production Branch** → set to `cursor/survey-scale-builder-e78f` → **Save**. Then **Deployments → Redeploy** the latest commit on that branch.
+
+After you merge this PR into `main`, switch Production Branch back to `main`.
+
+### 3. What you get
+
+| URL | When |
+|---|---|
+| `https://<project>.vercel.app` | Production (the Production Branch above) |
+| Preview URL per commit / PR | Every push to other branches |
+
+Deep links such as `/p`, `/researcher`, and `/take/DEMO01` work because `vercel.json` rewrites unknown paths to `index.html`.
+
+### 한국어 요약
+
+1. [vercel.com/new](https://vercel.com/new)에서 GitHub으로 로그인
+2. `trainthon999` 저장소 Import
+3. 설정은 비워도 됨 (데모 모드로 바로 동작, 참가자 코드 `DEMO01`)
+4. **Settings → Git → Production Branch**를 `cursor/survey-scale-builder-e78f`로 변경 후 Redeploy
+5. 이후 GitHub에 푸시하면 자동으로 다시 배포됩니다
+
 ## Routes
 
 | Path | Role |
