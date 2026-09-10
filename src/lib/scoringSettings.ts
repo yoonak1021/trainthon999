@@ -8,12 +8,17 @@ import {
   type ScaleScoringSettings,
 } from './scoringProtocol'
 
-const STORAGE_KEY = 'wave-scoring-settings-v1'
+import { getActiveResearcherId } from './localAuth'
+
+function storageKey(): string {
+  const ownerId = getActiveResearcherId() ?? 'anon'
+  return `wave-scoring-settings-v1:${ownerId}`
+}
 
 export function loadScoringSettings(): Record<string, ScaleScoringSettings> {
   const defaults = getAllDefaultSettings()
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey())
     if (!raw) return defaults
     const parsed = JSON.parse(raw) as Record<string, Partial<ScaleScoringSettings>>
     const merged: Record<string, ScaleScoringSettings> = { ...defaults }
@@ -29,7 +34,7 @@ export function loadScoringSettings(): Record<string, ScaleScoringSettings> {
 export function saveScoringSettings(
   settings: Record<string, ScaleScoringSettings>,
 ): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  localStorage.setItem(storageKey(), JSON.stringify(settings))
 }
 
 export function updateScaleSetting(

@@ -52,7 +52,16 @@ cp .env.example .env   # fill VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
 
-Without Supabase credentials the app runs in **local demo mode** (browser `localStorage`) with a seeded study and participant code `DEMO01`.
+Without Supabase credentials the app runs in **local demo mode** (browser `localStorage`). Researchers sign in; each account gets its own isolated workspace and a seeded study with participant code `DEMO01`.
+
+### Access model
+
+| Role | How they enter | What they can see |
+|---|---|---|
+| **Researcher** | Email + password | Only their own studies, surveys, participants, and responses |
+| **Participant** | Invitation code (no login) | Only the survey/occasion for that code |
+
+With Supabase: enable Email auth, apply `supabase/schema.sql` (or the `20260910_researcher_auth_participant_rpc` migration). Row Level Security blocks researchers from each other's rows. Participants never get table-level read/write — they use `participant_start_session` / `participant_save_response` RPCs.
 
 ## Scripts
 

@@ -1,8 +1,12 @@
 /**
  * In-browser persistence that mirrors the Postgres schema.
  * Used when Supabase env vars are not configured so the demo still works.
+ *
+ * Each researcher has an isolated database keyed by their account id.
+ * Participants never log in; session lookup scans workspaces by code + study.
  */
 
+import { listLocalResearcherIds } from './localAuth'
 import type {
   AnswerInput,
   Participant,
@@ -14,7 +18,10 @@ import type {
   SurveyItem,
 } from '../types/database'
 
-const STORAGE_KEY = 'longitudinal-survey-demo-v2'
+const DB_PREFIX = 'wave-researcher-db-v1:'
+const LEGACY_V2 = 'longitudinal-survey-demo-v2'
+const LEGACY_V1 = 'longitudinal-survey-demo-v1'
+const LEGACY_MIGRATED = 'wave-legacy-db-migrated'
 
 export type LocalDb = {
   studies: Study[]
@@ -26,7 +33,12 @@ export type LocalDb = {
   responses: Response[]
 }
 
-function emptyDb(): LocalDb {
+export type OwnerDb = {
+  ownerId: string
+  db: LocalDb
+}
+
+export function emptyDb(): LocalDb {
   return {
     studies: [],
     participants: [],
@@ -38,9 +50,13 @@ function emptyDb(): LocalDb {
   }
 }
 
-export function loadLocalDb(): LocalDb {
+export function dbStorageKey(ownerId: string): string {
+  return `${DB_PREFIX}${ownerId}`
+}
+
+export function loadLocalDb(ownerId: string): LocalDb {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(dbStorageKey(ownerId))
     if (!raw) return emptyDb()
     return { ...emptyDb(), ...JSON.parse(raw) } as LocalDb
   } catch {
@@ -48,8 +64,50 @@ export function loadLocalDb(): LocalDb {
   }
 }
 
-export function saveLocalDb(db: LocalDb): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
+export function saveLocalDb(ownerId: string, db: LocalDb): void {
+  localStorage.setItem(dbStorageKey(ownerId), JSON.stringify(db))
+}
+
+/** Move the pre-auth shared demo into the first researcher account once. */
+export function migrateLegacyDbIfNeeded(ownerId: string): void {
+  if (localStorage.getItem(LEGACY_MIGRATED)) return
+  const legacy = localStorage.getItem(LEGACY_V2) ?? localStorage.getItem(LEGACY_V1)
+  if (!legacy) return
+  try {
+    const parsed = { ...emptyDb(), ...JSON.parse(legacy) } as LocalDb
+    parsed.studies = parsed.studies.map((s) => ({ ...s, owner_id: ownerId }))
+    saveLocalDb(ownerId, parsed)
+    localStorage.setItem(LEGACY_MIGRATED, ownerId)
+    localStorage.removeItem(LEGACY_V2)
+    localStorage.removeItem(LEGACY_V1)
+  } catch {
+    // ignore corrupt legacy payloads
+  }
+}
+
+export function listOwnerDbs(): OwnerDb[] {
+  const ids = new Set<string>(listLocalResearcherIds())
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i)
+    if (key?.startsWith(DB_PREFIX)) ids.add(key.slice(DB_PREFIX.length))
+  }
+  return [...ids].map((ownerId) => ({ ownerId, db: loadLocalDb(ownerId) }))
+}
+
+export function findOwnerDbByStudy(studyId: string): OwnerDb | null {
+  return listOwnerDbs().find((entry) => entry.db.studies.some((s) => s.id === studyId)) ?? null
+}
+
+export function findOwnerDbByParticipant(participantId: string): OwnerDb | null {
+  return (
+    listOwnerDbs().find((entry) =>
+      entry.db.participants.some((p) => p.id === participantId),
+    ) ?? null
+  )
+}
+
+export function findOwnerDbBySurvey(surveyId: string): OwnerDb | null {
+  return listOwnerDbs().find((entry) => entry.db.surveys.some((s) => s.id === surveyId)) ?? null
 }
 
 export function newId(): string {
@@ -60,11 +118,13 @@ export function nowIso(): string {
   return new Date().toISOString()
 }
 
-/** Seed a demo study with SWLS so participant flow is immediately tryable. */
+/** Seed a private demo study with SWLS so a new researcher can try the flow. */
 export function ensureDemoSeed(
+  ownerId: string,
   seedItems: (surveyId: string, startOrder: number) => SurveyItem[],
 ): LocalDb {
-  const db = loadLocalDb()
+  migrateLegacyDbIfNeeded(ownerId)
+  const db = loadLocalDb(ownerId)
   if (db.studies.length > 0) return db
 
   const studyId = newId()
@@ -76,7 +136,7 @@ export function ensureDemoSeed(
 
   const study: Study = {
     id: studyId,
-    owner_id: 'local-researcher',
+    owner_id: ownerId,
     title: '데모 종단 연구',
     description:
       'Example longitudinal study. Participants answer SWLS (삶의 만족도 척도) once per occasion.',
@@ -119,7 +179,6 @@ export function ensureDemoSeed(
     created_at: ts,
   }
 
-  // Extra occasions so researchers can see longitudinal structure
   const moreOccasions: PromptOccasion[] = Array.from({ length: 13 }, (_, i) => {
     const idx = i + 2
     const d = new Date()
@@ -153,11 +212,12 @@ export function ensureDemoSeed(
     prompt_occasions: [occasion, ...moreOccasions],
     responses: [],
   }
-  saveLocalDb(seeded)
+  saveLocalDb(ownerId, seeded)
   return seeded
 }
 
 export function upsertLocalResponse(
+  ownerId: string,
   db: LocalDb,
   args: {
     participant_id: string
@@ -183,11 +243,11 @@ export function upsertLocalResponse(
       answered_at: ts,
       updated_at: ts,
     }
-    const responses = db.responses.map((r) =>
-      r.id === existing.id ? response : r,
-    )
-    const next = { ...db, responses }
-    saveLocalDb(next)
+    const next = {
+      ...db,
+      responses: db.responses.map((r) => (r.id === existing.id ? response : r)),
+    }
+    saveLocalDb(ownerId, next)
     return { db: next, response }
   }
 
@@ -204,6 +264,6 @@ export function upsertLocalResponse(
     updated_at: ts,
   }
   const next = { ...db, responses: [...db.responses, response] }
-  saveLocalDb(next)
+  saveLocalDb(ownerId, next)
   return { db: next, response }
 }

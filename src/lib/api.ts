@@ -9,8 +9,12 @@
  */
 
 import { DEMO_SCALE, getValidatedScale } from '../data/scales'
+import { getActiveResearcherId } from './localAuth'
 import {
+  dbStorageKey,
   ensureDemoSeed,
+  findOwnerDbByParticipant,
+  listOwnerDbs,
   newId,
   nowIso,
   saveLocalDb,
@@ -35,7 +39,15 @@ import type {
 
 export { isSupabaseConfigured }
 
-const LOCAL_OWNER = 'local-researcher'
+function requireOwnerId(): string {
+  const ownerId = getActiveResearcherId()
+  if (!ownerId) throw new Error('Researcher sign-in required')
+  return ownerId
+}
+
+function persistDb(db: LocalDb): void {
+  saveLocalDb(requireOwnerId(), db)
+}
 
 function scaleItemsToSurveyItems(
   surveyId: string,
@@ -78,7 +90,8 @@ function scaleItemsToSurveyItems(
 }
 
 function getDb(): LocalDb {
-  return ensureDemoSeed((surveyId, startOrder) =>
+  const ownerId = requireOwnerId()
+  return ensureDemoSeed(ownerId, (surveyId, startOrder) =>
     scaleItemsToSurveyItems(surveyId, DEMO_SCALE, startOrder),
   )
 }
@@ -115,12 +128,13 @@ export async function createStudy(input: {
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    if (!user) throw new Error('Researcher sign-in required')
     const { data, error } = await supabase
       .from('studies')
       .insert({
         title: input.title,
         description: input.description ?? null,
-        owner_id: user?.id ?? LOCAL_OWNER,
+        owner_id: user.id,
       })
       .select()
       .single()
@@ -130,7 +144,7 @@ export async function createStudy(input: {
 
   const study: Study = {
     id: newId(),
-    owner_id: LOCAL_OWNER,
+    owner_id: requireOwnerId(),
     title: input.title,
     description: input.description ?? null,
     created_at: ts,
@@ -138,7 +152,7 @@ export async function createStudy(input: {
   }
   const db = getDb()
   db.studies.unshift(study)
-  saveLocalDb(db)
+  persistDb(db)
   return study
 }
 
@@ -199,7 +213,7 @@ export async function createSurvey(input: {
   }
   const db = getDb()
   db.surveys.push(survey)
-  saveLocalDb(db)
+  persistDb(db)
   return survey
 }
 
@@ -221,7 +235,7 @@ export async function updateSurvey(
   const idx = db.surveys.findIndex((s) => s.id === id)
   if (idx < 0) throw new Error('Survey not found')
   db.surveys[idx] = { ...db.surveys[idx], ...patch, updated_at: nowIso() }
-  saveLocalDb(db)
+  persistDb(db)
   return db.surveys[idx]
 }
 
@@ -292,7 +306,7 @@ export async function addValidatedScaleItems(
     survey.instructions = `${scale.name_kr} / ${scale.name_en}\n${scale.scoringNote}`
     survey.updated_at = nowIso()
   }
-  saveLocalDb(db)
+  persistDb(db)
   return listItems(surveyId)
 }
 
@@ -370,7 +384,7 @@ export async function addCustomScaleWithItems(
 
   const db = getDb()
   db.survey_items.push(...newItems)
-  saveLocalDb(db)
+  persistDb(db)
   return listItems(input.survey_id)
 }
 
@@ -437,7 +451,7 @@ export async function addCustomItem(input: {
 
   const db = getDb()
   db.survey_items.push(item)
-  saveLocalDb(db)
+  persistDb(db)
   return item
 }
 
@@ -463,7 +477,7 @@ export async function deleteItem(itemId: string): Promise<void> {
         item.display_order = i + 1
       })
   }
-  saveLocalDb(db)
+  persistDb(db)
 }
 
 export type SurveyItemPatch = Partial<
@@ -519,7 +533,7 @@ export async function updateItem(
   const idx = db.survey_items.findIndex((i) => i.id === itemId)
   if (idx < 0) throw new Error('Item not found')
   db.survey_items[idx] = { ...db.survey_items[idx], ...nextPatch }
-  saveLocalDb(db)
+  persistDb(db)
   return db.survey_items[idx]
 }
 
@@ -568,7 +582,7 @@ export async function moveItem(
     db.survey_items[ib].display_order = -2
     db.survey_items[ia].display_order = orderB
     db.survey_items[ib].display_order = orderA
-    saveLocalDb(db)
+    persistDb(db)
     return listItems(a.survey_id)
   }
 
@@ -607,7 +621,7 @@ export async function reorderItems(
         it.display_order = idx + 1
       }
     })
-    saveLocalDb(db)
+    persistDb(db)
     return listItems(surveyId)
   }
 
@@ -677,7 +691,7 @@ export async function createParticipant(input: {
     throw new Error('Participant code already exists in this study')
   }
   db.participants.push(row)
-  saveLocalDb(db)
+  persistDb(db)
   return row
 }
 
@@ -707,33 +721,73 @@ export async function findParticipantByCode(
   )
 }
 
+function findLocalParticipantMatches(
+  code: string,
+  studyId?: string,
+): Array<{ ownerId: string; db: LocalDb; participant: Participant; study: Study }> {
+  const normalized = code.trim().toUpperCase()
+  const matches: Array<{
+    ownerId: string
+    db: LocalDb
+    participant: Participant
+    study: Study
+  }> = []
+  for (const { ownerId, db } of listOwnerDbs()) {
+    for (const participant of db.participants) {
+      if (!participant.active || participant.participant_code !== normalized) continue
+      if (studyId && participant.study_id !== studyId) continue
+      const study = db.studies.find((s) => s.id === participant.study_id)
+      if (study) matches.push({ ownerId, db, participant, study })
+    }
+  }
+  return matches
+}
+
+type ParticipantSessionRow = {
+  study: Study
+  participant: Participant
+  survey: Survey
+  items: SurveyItem[]
+  prompt: Prompt
+  occasion: PromptOccasion
+}
+
+async function startSupabaseParticipantSession(args: {
+  studyId?: string
+  participantCode: string
+  occasionId?: string
+}): Promise<ParticipantSessionRow | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase.rpc('participant_start_session', {
+    p_code: args.participantCode.trim().toUpperCase(),
+    p_study_id: args.studyId ?? null,
+    p_occasion_id: args.occasionId ?? null,
+  })
+  if (error) throw error
+  if (!data) return null
+  const payload = data as ParticipantSessionRow
+  if (!payload.study || !payload.participant || !payload.survey) return null
+  return {
+    ...payload,
+    items: (payload.items ?? []).map(normalizeItem),
+  }
+}
+
 /** Resolve participant by code alone (demo links may omit study id). */
 export async function findParticipantByCodeGlobal(
   code: string,
 ): Promise<{ participant: Participant; study: Study } | null> {
   const normalized = code.trim().toUpperCase()
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('participants')
-      .select('*, studies(*)')
-      .eq('participant_code', normalized)
-      .eq('active', true)
-      .limit(1)
-      .maybeSingle()
-    if (error) throw error
-    if (!data) return null
-    const study = (data as { studies: Study }).studies
-    const { studies: _s, ...participant } = data as Participant & { studies: Study }
-    return { participant, study }
+    const session = await startSupabaseParticipantSession({
+      participantCode: normalized,
+    })
+    if (!session) return null
+    return { participant: session.participant, study: session.study }
   }
-  const db = getDb()
-  const participant = db.participants.find(
-    (p) => p.participant_code === normalized && p.active,
-  )
-  if (!participant) return null
-  const study = db.studies.find((s) => s.id === participant.study_id)
-  if (!study) return null
-  return { participant, study }
+  const matches = findLocalParticipantMatches(normalized)
+  if (matches.length !== 1) return null
+  return { participant: matches[0].participant, study: matches[0].study }
 }
 
 // ---- Prompts / occasions ----
@@ -846,7 +900,7 @@ export async function createPromptWithOccasions(input: {
   const db = getDb()
   db.prompts.push(prompt)
   db.prompt_occasions.push(...occasions)
-  saveLocalDb(db)
+  persistDb(db)
   return { prompt, occasions }
 }
 
@@ -868,7 +922,7 @@ export async function updatePrompt(
   const idx = db.prompts.findIndex((p) => p.id === promptId)
   if (idx < 0) throw new Error('Prompt not found')
   db.prompts[idx] = { ...db.prompts[idx], ...patch }
-  saveLocalDb(db)
+  persistDb(db)
   return db.prompts[idx]
 }
 
@@ -881,7 +935,7 @@ export async function deletePrompt(promptId: string): Promise<void> {
   const db = getDb()
   db.prompts = db.prompts.filter((p) => p.id !== promptId)
   db.prompt_occasions = db.prompt_occasions.filter((o) => o.prompt_id !== promptId)
-  saveLocalDb(db)
+  persistDb(db)
 }
 
 export async function updatePromptOccasion(
@@ -902,7 +956,7 @@ export async function updatePromptOccasion(
   const idx = db.prompt_occasions.findIndex((o) => o.id === occasionId)
   if (idx < 0) throw new Error('Occasion not found')
   db.prompt_occasions[idx] = { ...db.prompt_occasions[idx], ...patch }
-  saveLocalDb(db)
+  persistDb(db)
   return db.prompt_occasions[idx]
 }
 
@@ -935,7 +989,7 @@ export async function addPromptOccasion(
 
   const db = getDb()
   db.prompt_occasions.push(occasion)
-  saveLocalDb(db)
+  persistDb(db)
   return occasion
 }
 
@@ -947,7 +1001,7 @@ export async function deletePromptOccasion(occasionId: string): Promise<void> {
   }
   const db = getDb()
   db.prompt_occasions = db.prompt_occasions.filter((o) => o.id !== occasionId)
-  saveLocalDb(db)
+  persistDb(db)
 }
 
 export async function getOccasion(id: string): Promise<PromptOccasion | null> {
@@ -972,73 +1026,61 @@ export async function getPrompt(id: string): Promise<Prompt | null> {
   return getDb().prompts.find((p) => p.id === id) ?? null
 }
 
-/** For a study, pick the first survey + current (or first) occasion for a participant link. */
-export async function resolveParticipationSession(args: {
-  studyId?: string
-  participantCode: string
-  occasionId?: string
-}): Promise<{
-  study: Study
-  participant: Participant
-  survey: Survey
-  items: SurveyItem[]
-  prompt: Prompt
-  occasion: PromptOccasion
-} | null> {
-  let study: Study | null = null
-  let participant: Participant | null = null
-
-  if (args.studyId) {
-    study = await getStudy(args.studyId)
-    if (!study) return null
-    participant = await findParticipantByCode(args.studyId, args.participantCode)
-  } else {
-    const found = await findParticipantByCodeGlobal(args.participantCode)
-    if (!found) return null
-    study = found.study
-    participant = found.participant
-  }
-  if (!study || !participant) return null
-
-  // If specific occasionId is requested, look it up directly
-  if (args.occasionId) {
-    const targetOccasion = await getOccasion(args.occasionId)
-    if (targetOccasion) {
-      const targetPrompt = await getPrompt(targetOccasion.prompt_id)
-      if (targetPrompt) {
-        const targetSurvey = await getSurvey(targetPrompt.survey_id)
-        if (targetSurvey) {
-          const items = await listItems(targetSurvey.id)
-          return {
-            study,
-            participant,
-            survey: targetSurvey,
-            items,
-            prompt: targetPrompt,
-            occasion: targetOccasion,
-          }
-        }
-      }
-    }
+function sessionFromLocalDb(
+  db: LocalDb,
+  study: Study,
+  participant: Participant,
+  occasionId?: string,
+): ParticipantSessionRow | null {
+  if (occasionId) {
+    const occasion = db.prompt_occasions.find((o) => o.id === occasionId)
+    if (!occasion) return null
+    const prompt = db.prompts.find((p) => p.id === occasion.prompt_id)
+    if (!prompt) return null
+    const survey = db.surveys.find((s) => s.id === prompt.survey_id && s.study_id === study.id)
+    if (!survey) return null
+    const items = db.survey_items
+      .filter((i) => i.survey_id === survey.id)
+      .sort((a, b) => a.display_order - b.display_order)
+    return { study, participant, survey, items, prompt, occasion }
   }
 
-  const surveys = await listSurveys(study.id)
-  if (surveys.length === 0) return null
-  const survey = surveys[0]
-  const items = await listItems(survey.id)
-  const prompts = await listPrompts(survey.id)
-  if (prompts.length === 0) return null
-  const prompt = prompts[0]
-  const occasions = await listOccasions(prompt.id)
+  const survey = db.surveys
+    .filter((s) => s.study_id === study.id)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))[0]
+  if (!survey) return null
+  const items = db.survey_items
+    .filter((i) => i.survey_id === survey.id)
+    .sort((a, b) => a.display_order - b.display_order)
+  const prompt = db.prompts.find((p) => p.survey_id === survey.id && p.active)
+  if (!prompt) return null
+  const occasions = db.prompt_occasions
+    .filter((o) => o.prompt_id === prompt.id)
+    .sort((a, b) => a.occasion_index - b.occasion_index)
   if (occasions.length === 0) return null
-
   const today = new Date().toDateString()
   const occasion =
     occasions.find((o) =>
       o.scheduled_for ? new Date(o.scheduled_for).toDateString() === today : false,
     ) ?? occasions[0]
-
   return { study, participant, survey, items, prompt, occasion }
+}
+
+/** For a study, pick the first survey + current (or first) occasion for a participant link. */
+export async function resolveParticipationSession(args: {
+  studyId?: string
+  participantCode: string
+  occasionId?: string
+}): Promise<ParticipantSessionRow | null> {
+  if (isSupabaseConfigured && supabase) {
+    return startSupabaseParticipantSession(args)
+  }
+
+  const matches = findLocalParticipantMatches(args.participantCode, args.studyId)
+  if (matches.length === 0) return null
+  if (!args.studyId && matches.length > 1) return null
+  const { db, study, participant } = matches[0]
+  return sessionFromLocalDb(db, study, participant, args.occasionId)
 }
 
 // ---- Responses ----
@@ -1050,28 +1092,21 @@ export async function saveResponse(args: {
   answer: AnswerInput
 }): Promise<Response> {
   if (isSupabaseConfigured && supabase) {
-    const payload = {
-      participant_id: args.participant_id,
-      survey_item_id: args.survey_item_id,
-      prompt_occasion_id: args.prompt_occasion_id,
-      numeric_value: args.answer.numeric_value ?? null,
-      text_value: args.answer.text_value ?? null,
-      selected_values: args.answer.selected_values ?? null,
-      answered_at: nowIso(),
-      updated_at: nowIso(),
-    }
-    const { data, error } = await supabase
-      .from('responses')
-      .upsert(payload, {
-        onConflict: 'participant_id,survey_item_id,prompt_occasion_id',
-      })
-      .select()
-      .single()
+    const { data, error } = await supabase.rpc('participant_save_response', {
+      p_participant_id: args.participant_id,
+      p_survey_item_id: args.survey_item_id,
+      p_prompt_occasion_id: args.prompt_occasion_id,
+      p_numeric_value: args.answer.numeric_value ?? null,
+      p_text_value: args.answer.text_value ?? null,
+      p_selected_values: args.answer.selected_values ?? null,
+    })
     if (error) throw error
-    return data
+    return data as Response
   }
 
-  const { response } = upsertLocalResponse(getDb(), args)
+  const found = findOwnerDbByParticipant(args.participant_id)
+  if (!found) throw new Error('Unknown participant')
+  const { response } = upsertLocalResponse(found.ownerId, found.db, args)
   return response
 }
 
@@ -1080,15 +1115,16 @@ export async function listResponsesForOccasion(
   occasionId: string,
 ): Promise<Response[]> {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('responses')
-      .select('*')
-      .eq('participant_id', participantId)
-      .eq('prompt_occasion_id', occasionId)
+    const { data, error } = await supabase.rpc('participant_list_responses', {
+      p_participant_id: participantId,
+      p_occasion_id: occasionId,
+    })
     if (error) throw error
-    return data ?? []
+    return (data ?? []) as Response[]
   }
-  return getDb().responses.filter(
+  const found = findOwnerDbByParticipant(participantId)
+  if (!found) return []
+  return found.db.responses.filter(
     (r) =>
       r.participant_id === participantId &&
       r.prompt_occasion_id === occasionId,
@@ -1132,7 +1168,8 @@ export async function listStudyResponses(studyId: string): Promise<ResponseExpor
 }
 
 export function resetLocalDemo(): void {
-  localStorage.removeItem('longitudinal-survey-demo-v1')
-  localStorage.removeItem('longitudinal-survey-demo-v2')
+  const ownerId = getActiveResearcherId()
+  if (!ownerId) return
+  localStorage.removeItem(dbStorageKey(ownerId))
   getDb()
 }
