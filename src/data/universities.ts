@@ -1,4 +1,4 @@
-export type SchoolRegion = 'kr' | 'us' | 'ca' | 'eu'
+export type SchoolRegion = 'kr' | 'us' | 'ca' | 'mx' | 'eu'
 
 export type School = {
   id: string
@@ -8,12 +8,19 @@ export type School = {
   nameKr: string
 }
 
-export const SCHOOL_REGIONS: Array<{ id: SchoolRegion; labelKr: string; labelEn: string }> = [
+export type SchoolGroup = 'kr' | 'na' | 'eu'
+
+export const SCHOOL_GROUPS: Array<{ id: SchoolGroup; labelKr: string; labelEn: string }> = [
   { id: 'kr', labelKr: '대한민국', labelEn: 'South Korea' },
-  { id: 'us', labelKr: '미국', labelEn: 'United States' },
-  { id: 'ca', labelKr: '캐나다', labelEn: 'Canada' },
+  { id: 'na', labelKr: '북미', labelEn: 'North America' },
   { id: 'eu', labelKr: '유럽', labelEn: 'Europe' },
 ]
+
+export function schoolGroup(school: School): SchoolGroup {
+  if (school.region === 'kr') return 'kr'
+  if (school.region === 'eu') return 'eu'
+  return 'na'
+}
 
 function s(
   region: SchoolRegion,
@@ -205,6 +212,22 @@ const US: School[] = [
   s('us', 'US', 'Wellesley College', '웰즐리 칼리지', 'us-wellesley'),
   s('us', 'US', 'Smith College', '스미스 칼리지', 'us-smith'),
   s('us', 'US', 'Barnard College', '바너드 칼리지', 'us-barnard'),
+  s('us', 'US', 'Howard University', '하워드 대학교', 'us-howard'),
+  s('us', 'US', 'Fordham University', '포드햄 대학교', 'us-fordham'),
+  s('us', 'US', 'Brandeis University', '브랜다이스 대학교', 'us-brandeis'),
+  s('us', 'US', 'George Mason University', '조지메이슨 대학교', 'us-gmu'),
+  s('us', 'US', 'Temple University', '템플 대학교', 'us-temple'),
+  s('us', 'US', 'Drexel University', '드렉셀 대학교', 'us-drexel'),
+  s('us', 'US', 'University of Illinois Chicago', '일리노이 대학교 시카고', 'us-uic'),
+  s('us', 'US', 'Oregon State University', '오리건 주립대학교', 'us-oregonstate'),
+  s('us', 'US', 'Washington State University', '워싱턴 주립대학교', 'us-wsu'),
+  s('us', 'US', 'Iowa State University', '아이오와 주립대학교', 'us-iastate'),
+  s('us', 'US', 'Colorado State University', '콜로라도 주립대학교', 'us-colostate'),
+  s('us', 'US', 'San Diego State University', '샌디에이고 주립대학교', 'us-sdsu'),
+  s('us', 'US', 'Pomona College', '포모나 칼리지', 'us-pomona'),
+  s('us', 'US', 'Claremont McKenna College', '클레어몬트매케나 칼리지', 'us-cmc'),
+  s('mx', 'MX', 'National Autonomous University of Mexico', '멕시코국립자치대학교(UNAM)', 'mx-unam'),
+  s('mx', 'MX', 'Tecnológico de Monterrey', '몬테레이공과대학교', 'mx-tec'),
 ]
 
 const CA: School[] = [
@@ -239,6 +262,9 @@ const CA: School[] = [
   s('ca', 'CA', 'University of Regina', '리자이나 대학교', 'ca-uregina'),
   s('ca', 'CA', 'Wilfrid Laurier University', '윌프리드러리어 대학교', 'ca-wlu'),
   s('ca', 'CA', 'University of Lethbridge', '레스브리지 대학교', 'ca-uleth'),
+  s('ca', 'CA', 'Lakehead University', '레이크헤드 대학교', 'ca-lakehead'),
+  s('ca', 'CA', 'University of Prince Edward Island', '프린스에드워드아일랜드 대학교', 'ca-upei'),
+  s('ca', 'CA', 'Saint Mary’s University', '세인트메리 대학교', 'ca-smu-ca'),
 ]
 
 const EU: School[] = [
@@ -346,6 +372,15 @@ const EU: School[] = [
   s('eu', 'PL', 'Jagiellonian University', '야기엘론스키 대학교', 'eu-uj'),
   s('eu', 'CZ', 'Charles University', '카렐 대학교', 'eu-cuni'),
   s('eu', 'GR', 'National and Kapodistrian University of Athens', '아테네 대학교', 'eu-uoa'),
+  s('eu', 'IT', 'Bocconi University', '보코니 대학교', 'eu-bocconi'),
+  s('eu', 'IT', 'European University Institute', '유럽대학원(EUI)', 'eu-eui'),
+  s('eu', 'HU', 'Central European University', '중유럽 대학교(CEU)', 'eu-ceu'),
+  s('eu', 'GB', 'University of Liverpool', '리버풀 대학교', 'eu-liverpool'),
+  s('eu', 'GB', 'Newcastle University', '뉴캐슬 대학교', 'eu-newcastle'),
+  s('eu', 'DE', 'University of Mannheim', '만하임 대학교', 'eu-mannheim'),
+  s('eu', 'NL', 'Eindhoven University of Technology', '아인트호벤공과대학교', 'eu-tue'),
+  s('eu', 'SE', 'Chalmers University of Technology', '찰머스공과대학교', 'eu-chalmers'),
+  s('eu', 'DK', 'Technical University of Denmark', '덴마크공과대학교(DTU)', 'eu-dtu'),
 ]
 
 export const UNIVERSITIES: School[] = [...KR, ...US, ...CA, ...EU]
@@ -360,18 +395,21 @@ export function schoolLabel(school: School, locale: 'ko' | 'en'): string {
   return locale === 'ko' ? school.nameKr : school.nameEn
 }
 
-export function filterSchools(
-  region: SchoolRegion | 'all',
-  query: string,
-): School[] {
+export function filterSchools(query: string): School[] {
   const q = query.trim().toLowerCase()
-  return UNIVERSITIES.filter((school) => {
-    if (region !== 'all' && school.region !== region) return false
-    if (!q) return true
-    return (
+  if (!q) return UNIVERSITIES
+  return UNIVERSITIES.filter(
+    (school) =>
       school.nameEn.toLowerCase().includes(q) ||
       school.nameKr.toLowerCase().includes(q) ||
-      school.country.toLowerCase().includes(q)
-    )
-  })
+      school.country.toLowerCase().includes(q),
+  )
+}
+
+export function groupSchools(schools: School[]): Record<SchoolGroup, School[]> {
+  const grouped: Record<SchoolGroup, School[]> = { kr: [], na: [], eu: [] }
+  for (const school of schools) {
+    grouped[schoolGroup(school)].push(school)
+  }
+  return grouped
 }

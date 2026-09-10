@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { SchoolSelect } from '../../components/researcher/SchoolSelect'
 import { useAuth } from '../../context/AuthContext'
 import { LanguageSwitcherButton, useLocale } from '../../context/LocaleContext'
-import { schoolById, type SchoolRegion } from '../../data/universities'
+import { OTHER_SCHOOL_ID, schoolById } from '../../data/universities'
 import { isSupabaseConfigured } from '../../lib/supabase'
 
 export function ResearcherLoginPage() {
@@ -13,17 +13,16 @@ export function ResearcherLoginPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [region, setRegion] = useState<SchoolRegion | 'all'>('kr')
   const [schoolId, setSchoolId] = useState('')
-  const [schoolQuery, setSchoolQuery] = useState('')
   const [otherSchool, setOtherSchool] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   function selectedSchoolName() {
-    if (schoolId === 'other') return otherSchool.trim()
-    return schoolById(schoolId)?.nameKr || schoolById(schoolId)?.nameEn || ''
+    if (schoolId === OTHER_SCHOOL_ID) return otherSchool.trim()
+    const school = schoolById(schoolId)
+    return school?.nameKr || school?.nameEn || ''
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -107,13 +106,9 @@ export function ResearcherLoginPage() {
                 />
               </label>
               <SchoolSelect
-                region={region}
                 schoolId={schoolId}
-                query={schoolQuery}
                 otherSchool={otherSchool}
-                onRegionChange={setRegion}
                 onSchoolIdChange={setSchoolId}
-                onQueryChange={setSchoolQuery}
                 onOtherSchoolChange={setOtherSchool}
               />
             </>
