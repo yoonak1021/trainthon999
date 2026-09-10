@@ -2,10 +2,15 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { isSupabaseConfigured } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
 import { LanguageSwitcherButton, useLocale } from '../../context/LocaleContext'
+import { schoolById, schoolLabel } from '../../data/universities'
 
 export function ResearcherLayout() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { researcher, signOut } = useAuth()
+  const school = researcher?.schoolId ? schoolById(researcher.schoolId) : undefined
+  const schoolDisplay = school
+    ? schoolLabel(school, locale)
+    : researcher?.schoolName
 
   return (
     <div className="mx-auto min-h-dvh max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
@@ -28,10 +33,13 @@ export function ResearcherLayout() {
           <div className="flex flex-col items-end gap-2">
             <LanguageSwitcherButton />
             {researcher && (
-              <div className="flex items-center gap-2 text-xs text-ink-soft">
-                <span className="max-w-[180px] truncate font-medium text-sea-deep">
-                  {researcher.email}
+              <div className="flex flex-col items-end gap-1 text-xs text-ink-soft">
+                <span className="max-w-[220px] truncate font-medium text-sea-deep">
+                  {researcher.name || researcher.email}
                 </span>
+                {schoolDisplay && (
+                  <span className="max-w-[220px] truncate">{schoolDisplay}</span>
+                )}
                 <button
                   type="button"
                   onClick={() => void signOut()}

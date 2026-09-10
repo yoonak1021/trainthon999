@@ -1,18 +1,30 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { SchoolSelect } from '../../components/researcher/SchoolSelect'
 import { useAuth } from '../../context/AuthContext'
 import { LanguageSwitcherButton, useLocale } from '../../context/LocaleContext'
+import { schoolById, type SchoolRegion } from '../../data/universities'
 import { isSupabaseConfigured } from '../../lib/supabase'
 
 export function ResearcherLoginPage() {
   const { signIn, signUp } = useAuth()
   const { t } = useLocale()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [region, setRegion] = useState<SchoolRegion | 'all'>('kr')
+  const [schoolId, setSchoolId] = useState('')
+  const [schoolQuery, setSchoolQuery] = useState('')
+  const [otherSchool, setOtherSchool] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  function selectedSchoolName() {
+    if (schoolId === 'other') return otherSchool.trim()
+    return schoolById(schoolId)?.nameKr || schoolById(schoolId)?.nameEn || ''
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -21,7 +33,18 @@ export function ResearcherLoginPage() {
     setInfo(null)
     try {
       if (mode === 'signup') {
-        await signUp(email, password)
+        const schoolName = selectedSchoolName()
+        if (!name.trim()) {
+          throw new Error(t('이름을 입력해 주세요.', 'Please enter your name.'))
+        }
+        if (!schoolName) {
+          throw new Error(t('소속 학교를 선택해 주세요.', 'Please select your school.'))
+        }
+        await signUp(email, password, {
+          name: name.trim(),
+          schoolId,
+          schoolName,
+        })
         if (isSupabaseConfigured) {
           setInfo(
             t(
@@ -50,7 +73,7 @@ export function ResearcherLoginPage() {
         <LanguageSwitcherButton />
       </div>
 
-      <div className="my-auto animate-rise">
+      <div className="my-auto animate-rise py-6">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-sea">
           {t('연구자 전용', 'Researchers only')}
         </p>
@@ -67,6 +90,35 @@ export function ResearcherLoginPage() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-3">
+          {mode === 'signup' && (
+            <>
+              <label className="block text-sm">
+                <span className="mb-1.5 block font-medium text-sea-deep">
+                  {t('이름', 'Name')}
+                </span>
+                <input
+                  type="text"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder={t('예: 강윤아', 'e.g. Yoona Kang')}
+                  className="w-full rounded-xl border border-sand bg-white px-3 py-2.5 outline-none transition focus:border-sea/40 focus:ring-4 focus:ring-sea/10"
+                />
+              </label>
+              <SchoolSelect
+                region={region}
+                schoolId={schoolId}
+                query={schoolQuery}
+                otherSchool={otherSchool}
+                onRegionChange={setRegion}
+                onSchoolIdChange={setSchoolId}
+                onQueryChange={setSchoolQuery}
+                onOtherSchoolChange={setOtherSchool}
+              />
+            </>
+          )}
+
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-sea-deep">
               {t('이메일', 'Email')}

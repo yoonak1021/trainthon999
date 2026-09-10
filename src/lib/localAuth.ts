@@ -10,6 +10,9 @@ const SESSION_KEY = 'wave-researcher-session-v1'
 export type LocalResearcher = {
   id: string
   email: string
+  name: string
+  schoolId: string
+  schoolName: string
   created_at: string
 }
 
@@ -21,13 +24,22 @@ type StoredAccount = LocalResearcher & {
 export type LocalSession = {
   id: string
   email: string
+  name: string
+  schoolId: string
+  schoolName: string
 }
 
 function loadAccounts(): StoredAccount[] {
   try {
     const raw = localStorage.getItem(ACCOUNTS_KEY)
     if (!raw) return []
-    return JSON.parse(raw) as StoredAccount[]
+    const parsed = JSON.parse(raw) as StoredAccount[]
+    return parsed.map((account) => ({
+      ...account,
+      name: account.name ?? '',
+      schoolId: account.schoolId ?? '',
+      schoolName: account.schoolName ?? '',
+    }))
   } catch {
     return []
   }
@@ -55,7 +67,13 @@ export function getLocalSession(): LocalSession | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as LocalSession
     if (!parsed?.id || !parsed?.email) return null
-    return parsed
+    return {
+      id: parsed.id,
+      email: parsed.email,
+      name: parsed.name ?? '',
+      schoolId: parsed.schoolId ?? '',
+      schoolName: parsed.schoolName ?? '',
+    }
   } catch {
     return null
   }
@@ -80,10 +98,27 @@ export function setLocalSession(session: LocalSession | null): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session))
 }
 
-export async function signUpLocal(email: string, password: string): Promise<LocalSession> {
+export type ResearcherProfile = {
+  name: string
+  schoolId: string
+  schoolName: string
+}
+
+export async function signUpLocal(
+  email: string,
+  password: string,
+  profile: ResearcherProfile,
+): Promise<LocalSession> {
   const normalized = normalizeEmail(email)
+  const name = profile.name.trim()
   if (!normalized || !normalized.includes('@')) {
     throw new Error('Enter a valid email address.')
+  }
+  if (!name) {
+    throw new Error('Enter your name.')
+  }
+  if (!profile.schoolName.trim()) {
+    throw new Error('Select your school.')
   }
   if (password.length < 8) {
     throw new Error('Password must be at least 8 characters.')
@@ -96,13 +131,22 @@ export async function signUpLocal(email: string, password: string): Promise<Loca
   const account: StoredAccount = {
     id: crypto.randomUUID(),
     email: normalized,
+    name,
+    schoolId: profile.schoolId,
+    schoolName: profile.schoolName.trim(),
     password_salt: salt,
     password_hash: await hashPassword(password, salt),
     created_at: new Date().toISOString(),
   }
   accounts.push(account)
   saveAccounts(accounts)
-  const session = { id: account.id, email: account.email }
+  const session: LocalSession = {
+    id: account.id,
+    email: account.email,
+    name: account.name,
+    schoolId: account.schoolId,
+    schoolName: account.schoolName,
+  }
   setLocalSession(session)
   return session
 }
@@ -117,7 +161,13 @@ export async function signInLocal(email: string, password: string): Promise<Loca
   if (hash !== account.password_hash) {
     throw new Error('Email or password is incorrect.')
   }
-  const session = { id: account.id, email: account.email }
+  const session: LocalSession = {
+    id: account.id,
+    email: account.email,
+    name: account.name ?? '',
+    schoolId: account.schoolId ?? '',
+    schoolName: account.schoolName ?? '',
+  }
   setLocalSession(session)
   return session
 }

@@ -12,20 +12,40 @@ import {
   signInLocal,
   signOutLocal,
   signUpLocal,
+  type ResearcherProfile,
 } from '../lib/localAuth'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 export type Researcher = {
   id: string
   email: string
+  name: string
+  schoolId: string
+  schoolName: string
 }
 
 type AuthContextValue = {
   researcher: Researcher | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string, profile: ResearcherProfile) => Promise<void>
   signOut: () => Promise<void>
+}
+
+function researcherFromUser(user: {
+  id: string
+  email?: string | null
+  user_metadata?: Record<string, unknown>
+}): Researcher | null {
+  if (!user.email) return null
+  const meta = user.user_metadata ?? {}
+  return {
+    id: user.id,
+    email: user.email,
+    name: typeof meta.name === 'string' ? meta.name : '',
+    schoolId: typeof meta.schoolId === 'string' ? meta.schoolId : '',
+    schoolName: typeof meta.schoolName === 'string' ? meta.schoolName : '',
+  }
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -44,9 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const user = data.session?.user
           if (!cancelled) {
             setSupabaseOwnerId(user?.id ?? null)
-            setResearcher(
-              user?.email ? { id: user.id, email: user.email } : null,
-            )
+            setResearcher(user ? researcherFromUser(user) : null)
           }
           return
         }
@@ -62,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         const user = session?.user
         setSupabaseOwnerId(user?.id ?? null)
-        setResearcher(user?.email ? { id: user.id, email: user.email } : null)
+        setResearcher(user ? researcherFromUser(user) : null)
       })
       return () => {
         cancelled = true
@@ -89,16 +107,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const user = data.user
           if (!user?.email) throw new Error('Sign-in failed.')
           setSupabaseOwnerId(user.id)
-          setResearcher({ id: user.id, email: user.email })
+          setResearcher(researcherFromUser(user))
           return
         }
         setResearcher(await signInLocal(email, password))
       },
-      async signUp(email, password) {
+      async signUp(email, password, profile) {
         if (isSupabaseConfigured && supabase) {
           const { data, error } = await supabase.auth.signUp({
             email: email.trim(),
             password,
+            options: {
+              data: {
+                name: profile.name.trim(),
+                schoolId: profile.schoolId,
+                schoolName: profile.schoolName.trim(),
+              },
+            },
           })
           if (error) throw error
           const user = data.user
@@ -109,11 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (data.session) {
             setSupabaseOwnerId(user.id)
-            setResearcher({ id: user.id, email: user.email })
+            setResearcher(researcherFromUser(user))
           }
           return
         }
-        setResearcher(await signUpLocal(email, password))
+        setResearcher(await signUpLocal(email, password, profile))
       },
       async signOut() {
         if (isSupabaseConfigured && supabase) {
