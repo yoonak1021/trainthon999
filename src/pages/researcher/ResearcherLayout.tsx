@@ -1,9 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { isSupabaseConfigured } from '../../lib/api'
+import { useAuth } from '../../context/AuthContext'
 import { LanguageSwitcherButton, useLocale } from '../../context/LocaleContext'
 
 export function ResearcherLayout() {
   const { t } = useLocale()
+  const { researcher, signOut } = useAuth()
 
   return (
     <div className="mx-auto min-h-dvh max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
@@ -25,6 +27,20 @@ export function ResearcherLayout() {
           </div>
           <div className="flex flex-col items-end gap-2">
             <LanguageSwitcherButton />
+            {researcher && (
+              <div className="flex items-center gap-2 text-xs text-ink-soft">
+                <span className="max-w-[180px] truncate font-medium text-sea-deep">
+                  {researcher.email}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  className="font-semibold text-sea underline-offset-2 hover:underline"
+                >
+                  {t('로그아웃', 'Sign out')}
+                </button>
+              </div>
+            )}
             <NavLink
               to="/p"
               className="text-xs font-semibold text-sea underline-offset-2 hover:underline"
@@ -54,8 +70,8 @@ export function ResearcherLayout() {
         {!isSupabaseConfigured && (
           <p className="mt-4 rounded-xl border border-warn/20 bg-warn-bg/80 px-3 py-2 text-xs text-warn">
             {t(
-              '현재 브라우저 로컬 데모 모드로 실행 중입니다 (Supabase 미연결). 데이터는 이 브라우저의 localStorage에 보관됩니다.',
-              'Running in local demo mode (no Supabase env). Data is stored in this browser. Apply supabase/schema.sql and set VITE_SUPABASE_* to use Postgres.',
+              '로컬 데모 모드입니다. 이 브라우저에서 연구자 계정별로 데이터가 분리됩니다. 서버 보안(RLS)을 쓰려면 Supabase를 연결하세요.',
+              'Local demo mode. Each researcher account is isolated in this browser. Connect Supabase for server-enforced RLS.',
             )}
           </p>
         )}

@@ -115,7 +115,12 @@ export function StudyDetailPage() {
   if (!study) {
     return (
       <div>
-        <p className="text-ink-soft">{t('연구를 찾을 수 없습니다.', 'Study not found.')}</p>
+        <p className="text-ink-soft">
+          {t(
+            '이 연구를 찾을 수 없거나, 다른 연구자 계정 소유라 접근할 수 없습니다.',
+            'This study was not found, or it belongs to another researcher.',
+          )}
+        </p>
         <Link to="/researcher" className="mt-3 inline-block text-sm text-sea">
           {t('← 연구 목록으로 돌아가기', 'Back to studies')}
         </Link>

@@ -138,7 +138,7 @@ export function StudiesPage() {
         }}
         className="text-xs text-ink-soft underline-offset-2 hover:underline"
       >
-        {t('로컬 데모 데이터 초기화', 'Reset local demo data')}
+        {t('내 워크스페이스 데모 데이터 초기화', 'Reset my workspace demo data')}
       </button>
     </div>
   )
