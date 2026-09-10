@@ -11,10 +11,16 @@ import { StudiesPage } from './pages/researcher/StudiesPage'
 import { StudyDetailPage } from './pages/researcher/StudyDetailPage'
 import { SurveyEditorPage } from './pages/researcher/SurveyEditorPage'
 
+const routerBasename = (() => {
+  const base = import.meta.env.BASE_URL
+  if (!base || base === '/') return undefined
+  return base.replace(/\/$/, '')
+})()
+
 export default function App() {
   return (
     <LocaleProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/flow-slide" element={<FlowSlide />} />
