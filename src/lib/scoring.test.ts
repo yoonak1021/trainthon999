@@ -1,4 +1,10 @@
-import { scoreScale, scoreAll, reverseCode, SCORING_SPECS, RawResponses } from "./scoring";
+import {
+  scoreScale,
+  scoreAll,
+  reverseCode,
+  SCORING_SPECS,
+  type RawResponses,
+} from "./scoring";
 
 let pass = 0;
 let fail = 0;
@@ -61,4 +67,6 @@ const merged = scoreAll({ ...spaneResp, swls_1: 5, swls_2: 5, swls_3: 5, swls_4:
 check("scoreAll includes spane_balance and swls_total", [merged.spane_balance, merged.swls_total], [12, 25]);
 
 console.log(`\n${pass} passed, ${fail} failed`);
-if (fail > 0) process.exit(1);
+if (fail > 0) {
+  throw new Error(`${fail} scoring test(s) failed`);
+}

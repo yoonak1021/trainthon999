@@ -1,0 +1,182 @@
+{
+  "_README": {
+    "purpose": "Seed data for validated psychology scales, structured to match the survey_items schema (variable_name, scale, position_in_scale, subscale, reverse_scored). Bilingual: Korean is the validated administered version; English is the original source wording.",
+    "VERIFY_BEFORE_RESEARCH_USE": [
+      "response_scale.anchors are NOT in the source document. They are the CONVENTIONAL anchors for each instrument and are marked verified:false. Replace with your lab's actual protocol before collecting data.",
+      "reverse_scored reflects best-available knowledge, per-scale confidence noted in scoring_note. MVS reverse-coding is NOT confirmed for this 18-item variant — check Richins (2004) scoring key before use.",
+      "Item text is copied verbatim from your document. Confirm it matches the officially published Korean translation you are licensed/intending to use."
+    ],
+    "confidence_key": {
+      "high": "Reverse-scoring / subscale structure is well-documented and consistent across the literature.",
+      "verify": "Plausible but must be confirmed against the original paper before real use."
+    }
+  },
+  "scales": [
+    {
+      "scale_id": "dpes_awe",
+      "name_kr": "기질적 긍정 정서 척도 - 경외감 하위척도",
+      "name_en": "Dispositional Positive Emotions Scale - Awe Subscale (DPES-Awe)",
+      "source": "Shiota, Keltner, & John (2006)",
+      "response_scale": { "type": "likert", "points": 7, "anchors_proposed_en": "1 = Strongly disagree ... 7 = Strongly agree", "verified": false },
+      "scoring_note": "No reverse-scored items in standard scoring (verify).",
+      "items": [
+        { "variable_name": "dpes_awe_1", "position_in_scale": 1, "subscale": null, "reverse_scored": false, "text_kr": "나는 종종 경이로움을 느낀다.", "text_en": "I often feel awe." },
+        { "variable_name": "dpes_awe_2", "position_in_scale": 2, "subscale": null, "reverse_scored": false, "text_kr": "나는 내 주변의 모든 것에서 아름다움을 느낀다.", "text_en": "I see beauty all around me." },
+        { "variable_name": "dpes_awe_3", "position_in_scale": 3, "subscale": null, "reverse_scored": false, "text_kr": "나는 거의 매일 경이로움을 느낀다.", "text_en": "I feel wonder almost every day." },
+        { "variable_name": "dpes_awe_4", "position_in_scale": 4, "subscale": null, "reverse_scored": false, "text_kr": "나는 종종 주변 사물들에서 패턴을 찾는다.", "text_en": "I often look for patterns in the objects around me." },
+        { "variable_name": "dpes_awe_5", "position_in_scale": 5, "subscale": null, "reverse_scored": false, "text_kr": "나는 자연의 아름다움을 볼 기회가 많다.", "text_en": "I have many opportunities to see the beauty of nature." },
+        { "variable_name": "dpes_awe_6", "position_in_scale": 6, "subscale": null, "reverse_scored": false, "text_kr": "나는 세상에 대한 이해의 지평을 넓힐 수 있는 경험들을 추구한다.", "text_en": "I seek out experiences that challenge my understanding of the world." }
+      ]
+    },
+    {
+      "scale_id": "tipi",
+      "name_kr": "10문항 성격 검사",
+      "name_en": "Ten-Item Personality Inventory (TIPI)",
+      "source": "Gosling, Rentfrow, & Swann (2003)",
+      "response_scale": { "type": "likert", "points": 7, "anchors_proposed_en": "1 = Disagree strongly ... 7 = Agree strongly", "verified": false },
+      "scoring_note": "HIGH confidence. Reverse-scored: items 2,4,6,8,10. Dimensions (each = mean of one standard + one reverse item): Extraversion (1, 6R); Agreeableness (7, 2R); Conscientiousness (3, 8R); Emotional Stability (9, 4R); Openness (5, 10R).",
+      "items": [
+        { "variable_name": "tipi_1", "position_in_scale": 1, "subscale": "extraversion", "reverse_scored": false, "text_kr": "외향적이고, 적극적이다.", "text_en": "Extraverted, enthusiastic." },
+        { "variable_name": "tipi_2_r", "position_in_scale": 2, "subscale": "agreeableness", "reverse_scored": true, "text_kr": "비판적이고, 논쟁을 좋아한다.", "text_en": "Critical, quarrelsome." },
+        { "variable_name": "tipi_3", "position_in_scale": 3, "subscale": "conscientiousness", "reverse_scored": false, "text_kr": "믿음직스럽고, 자기 절제를 잘 한다.", "text_en": "Dependable, self-disciplined." },
+        { "variable_name": "tipi_4_r", "position_in_scale": 4, "subscale": "emotional_stability", "reverse_scored": true, "text_kr": "근심 걱정이 많고, 쉽게 흥분한다.", "text_en": "Anxious, easily upset." },
+        { "variable_name": "tipi_5", "position_in_scale": 5, "subscale": "openness", "reverse_scored": false, "text_kr": "새로운 경험에 개방적이고, 복잡다단하다.", "text_en": "Open to new experiences, complex." },
+        { "variable_name": "tipi_6_r", "position_in_scale": 6, "subscale": "extraversion", "reverse_scored": true, "text_kr": "내성적이고, 조용하다.", "text_en": "Reserved, quiet." },
+        { "variable_name": "tipi_7", "position_in_scale": 7, "subscale": "agreeableness", "reverse_scored": false, "text_kr": "동정심이 많고, 다정다감하다.", "text_en": "Sympathetic, warm." },
+        { "variable_name": "tipi_8_r", "position_in_scale": 8, "subscale": "conscientiousness", "reverse_scored": true, "text_kr": "정리정돈을 잘 못하고, 덤벙댄다.", "text_en": "Disorganized, careless." },
+        { "variable_name": "tipi_9", "position_in_scale": 9, "subscale": "emotional_stability", "reverse_scored": false, "text_kr": "차분하고, 감정의 기복이 적다.", "text_en": "Calm, emotionally stable." },
+        { "variable_name": "tipi_10_r", "position_in_scale": 10, "subscale": "openness", "reverse_scored": true, "text_kr": "변화를 싫어하고, 창의적이지 않다.", "text_en": "Conventional, uncreative." }
+      ]
+    },
+    {
+      "scale_id": "swls",
+      "name_kr": "삶의 만족도 척도",
+      "name_en": "Satisfaction with Life Scale (SWLS)",
+      "source": "Diener, Emmons, Larsen, & Griffin (1985)",
+      "response_scale": { "type": "likert", "points": 7, "anchors_proposed_en": "1 = Strongly disagree ... 7 = Strongly agree", "verified": false },
+      "scoring_note": "HIGH confidence. No reverse-scored items. Total = sum of all 5.",
+      "items": [
+        { "variable_name": "swls_1", "position_in_scale": 1, "subscale": null, "reverse_scored": false, "text_kr": "전반적으로 볼때, 나의 삶은 나의 이상에 가깝다.", "text_en": "In most ways my life is close to my ideal." },
+        { "variable_name": "swls_2", "position_in_scale": 2, "subscale": null, "reverse_scored": false, "text_kr": "나의 삶의 상황들은 아주 좋다.", "text_en": "The conditions of my life are excellent." },
+        { "variable_name": "swls_3", "position_in_scale": 3, "subscale": null, "reverse_scored": false, "text_kr": "나는 나의 삶에 만족한다.", "text_en": "I am satisfied with my life." },
+        { "variable_name": "swls_4", "position_in_scale": 4, "subscale": null, "reverse_scored": false, "text_kr": "지금까지 내 삶에서 내가 원하는 중요한 것들을 이루어 냈다.", "text_en": "So far I have gotten the important things I want in life." },
+        { "variable_name": "swls_5", "position_in_scale": 5, "subscale": null, "reverse_scored": false, "text_kr": "만약 인생을 다시 산다 해도, 나는 거의 아무것도 바꾸지 않을 것이다.", "text_en": "If I could live my life over, I would change almost nothing." }
+      ]
+    },
+    {
+      "scale_id": "prlq",
+      "name_kr": "심리적 풍요로운 삶 척도",
+      "name_en": "Psychologically Rich Life Questionnaire (PRLQ)",
+      "source": "Oishi et al. (2019)",
+      "response_scale": { "type": "likert", "points": 7, "anchors_proposed_en": "1 = Strongly disagree ... 7 = Strongly agree", "verified": false },
+      "scoring_note": "No reverse-scored items in standard scoring (verify).",
+      "items": [
+        { "variable_name": "prlq_1", "position_in_scale": 1, "subscale": null, "reverse_scored": false, "text_kr": "내 삶은 지금까지 심리적으로 풍요로웠다.", "text_en": "My life has been psychologically rich." },
+        { "variable_name": "prlq_2", "position_in_scale": 2, "subscale": null, "reverse_scored": false, "text_kr": "내 삶은 지금까지 경험적으로 풍요로웠다.", "text_en": "My life has been experientially rich." },
+        { "variable_name": "prlq_3", "position_in_scale": 3, "subscale": null, "reverse_scored": false, "text_kr": "내 삶은 지금까지 감정적으로 풍요로웠다.", "text_en": "My life has been emotionally rich." },
+        { "variable_name": "prlq_4", "position_in_scale": 4, "subscale": null, "reverse_scored": false, "text_kr": "나는 그동안 흥미로운 경험을 많이 해왔다.", "text_en": "I have had a lot of interesting experiences." },
+        { "variable_name": "prlq_5", "position_in_scale": 5, "subscale": null, "reverse_scored": false, "text_kr": "나는 그동안 새로운 경험을 많이 해왔다.", "text_en": "I have had a lot of novel experiences." },
+        { "variable_name": "prlq_6", "position_in_scale": 6, "subscale": null, "reverse_scored": false, "text_kr": "내 삶은 독특하고 흔치 않은 경험들로 가득하다.", "text_en": "My life has been full of unique, unusual experiences." },
+        { "variable_name": "prlq_7", "position_in_scale": 7, "subscale": null, "reverse_scored": false, "text_kr": "내 삶은 다채롭고 강렬한 순간들로 이뤄져 있다.", "text_en": "My life consists of rich, intense moments." },
+        { "variable_name": "prlq_8", "position_in_scale": 8, "subscale": null, "reverse_scored": false, "text_kr": "나는 여행이나 콘서트와 같은 직접 경험을 통해 폭넓은 감정을 경험한다.", "text_en": "I experience a full range of emotions via first-hand experiences such as travel and attending concerts." },
+        { "variable_name": "prlq_9", "position_in_scale": 9, "subscale": null, "reverse_scored": false, "text_kr": "나는 다른 사람들에게 이야기할 개인적인 이야기들이 많다.", "text_en": "I have a lot of personal stories to tell others." },
+        { "variable_name": "prlq_10", "position_in_scale": 10, "subscale": null, "reverse_scored": false, "text_kr": "나는 죽기 직전에, \"나는 재미있는 인생을 살았다\"라고 말할 것 같다.", "text_en": "On my deathbed, I am likely to say \"I had an interesting life\"." },
+        { "variable_name": "prlq_11", "position_in_scale": 11, "subscale": null, "reverse_scored": false, "text_kr": "나는 죽기 직전에, \"나는 많은 것을 보고 배웠다\"라고 말할 것 같다.", "text_en": "On my deathbed, I am likely to say \"I have seen and learned a lot\"." },
+        { "variable_name": "prlq_12", "position_in_scale": 12, "subscale": null, "reverse_scored": false, "text_kr": "내 삶은 좋은 소설이나 영화로 만들 만하다.", "text_en": "My life would make a good novel or movie." }
+      ]
+    },
+    {
+      "scale_id": "spane",
+      "name_kr": "긍정 및 부정 경험 척도",
+      "name_en": "Scale of Positive and Negative Experience (SPANE)",
+      "source": "Diener et al. (2010)",
+      "response_scale": { "type": "likert", "points": 5, "anchors_proposed_en": "1 = Very rarely or never ... 5 = Very often or always", "verified": false },
+      "scoring_note": "HIGH confidence. Not reverse-scored; two subscales. SPANE-P = sum of positive items (1,3,4,5,6,7); SPANE-N = sum of negative items (2,8,9,10,11,12); SPANE-B (balance) = P - N.",
+      "items": [
+        { "variable_name": "spane_pos_1", "position_in_scale": 1, "subscale": "positive", "reverse_scored": false, "text_kr": "긍정적인", "text_en": "Positive" },
+        { "variable_name": "spane_neg_1", "position_in_scale": 2, "subscale": "negative", "reverse_scored": false, "text_kr": "부정적인", "text_en": "Negative" },
+        { "variable_name": "spane_pos_2", "position_in_scale": 3, "subscale": "positive", "reverse_scored": false, "text_kr": "좋은", "text_en": "Good" },
+        { "variable_name": "spane_pos_3", "position_in_scale": 4, "subscale": "positive", "reverse_scored": false, "text_kr": "유쾌한", "text_en": "Pleasant" },
+        { "variable_name": "spane_pos_4", "position_in_scale": 5, "subscale": "positive", "reverse_scored": false, "text_kr": "행복한", "text_en": "Happy" },
+        { "variable_name": "spane_pos_5", "position_in_scale": 6, "subscale": "positive", "reverse_scored": false, "text_kr": "즐거운", "text_en": "Joyful" },
+        { "variable_name": "spane_pos_6", "position_in_scale": 7, "subscale": "positive", "reverse_scored": false, "text_kr": "만족한", "text_en": "Contented" },
+        { "variable_name": "spane_neg_2", "position_in_scale": 8, "subscale": "negative", "reverse_scored": false, "text_kr": "나쁜", "text_en": "Bad" },
+        { "variable_name": "spane_neg_3", "position_in_scale": 9, "subscale": "negative", "reverse_scored": false, "text_kr": "불쾌한", "text_en": "Unpleasant" },
+        { "variable_name": "spane_neg_4", "position_in_scale": 10, "subscale": "negative", "reverse_scored": false, "text_kr": "슬픈", "text_en": "Sad" },
+        { "variable_name": "spane_neg_5", "position_in_scale": 11, "subscale": "negative", "reverse_scored": false, "text_kr": "두려운", "text_en": "Afraid" },
+        { "variable_name": "spane_neg_6", "position_in_scale": 12, "subscale": "negative", "reverse_scored": false, "text_kr": "화난", "text_en": "Angry" }
+      ]
+    },
+    {
+      "scale_id": "mvs",
+      "name_kr": "물질주의 가치 척도 (축약본)",
+      "name_en": "Material Values Scale - Short Form (MVS)",
+      "source": "Richins (2004); original: Richins & Dawson (1992)",
+      "response_scale": { "type": "likert", "points": 5, "anchors_proposed_en": "1 = Strongly disagree ... 5 = Strongly agree", "verified": false },
+      "scoring_note": "VERIFY — reverse-scoring NOT confirmed for this 18-item variant. Subscales: Success (SS), Centrality (C), Happiness (H). Items expressing LOW materialism are conventionally reverse-coded; the reverse_scored flags below are my best inference from item direction and MUST be checked against Richins' scoring key before use.",
+      "items": [
+        { "variable_name": "mvs_ss_1", "position_in_scale": 1, "subscale": "success", "reverse_scored": false, "text_kr": "나는 고가의 집, 차, 옷을 가진 사람들이 존경스럽고 부럽다.", "text_en": "I admire people who own expensive homes, cars, and clothes." },
+        { "variable_name": "mvs_ss_2", "position_in_scale": 2, "subscale": "success", "reverse_scored": false, "text_kr": "물질적으로 풍족해지는 것이 내 인생에 있어서 가장 중요한 성취 중 하나이다.", "text_en": "Some of the most important achievements in life include acquiring material possessions." },
+        { "variable_name": "mvs_ss_3_r", "position_in_scale": 3, "subscale": "success", "reverse_scored": true, "text_kr": "사람들이 소유한 물질의 양이 인생에서의 가장 중요한 성공의 지표는 아니다.", "text_en": "I don't place much emphasis on the amount of material objects people own as a sign of success." },
+        { "variable_name": "mvs_ss_4", "position_in_scale": 4, "subscale": "success", "reverse_scored": false, "text_kr": "내가 소유한 것들은 내가 얼마나 인생을 성공적으로 살아가고 있는지 보여준다.", "text_en": "The things I own say a lot about how well I'm doing in life." },
+        { "variable_name": "mvs_ss_5", "position_in_scale": 5, "subscale": "success", "reverse_scored": false, "text_kr": "나는 사람들이 부러워할 만한 것들을 갖고 있는 게 좋다.", "text_en": "I like to own things that impress people." },
+        { "variable_name": "mvs_ss_6_r", "position_in_scale": 6, "subscale": "success", "reverse_scored": true, "text_kr": "나는 타인의 물질적 소유물에 별 관심이 없다.", "text_en": "I don't pay much attention to the material objects other people own." },
+        { "variable_name": "mvs_c_1_r", "position_in_scale": 7, "subscale": "centrality", "reverse_scored": true, "text_kr": "나는 대개 내가 필요한 물건만 산다.", "text_en": "I usually buy only the things I need." },
+        { "variable_name": "mvs_c_2_r", "position_in_scale": 8, "subscale": "centrality", "reverse_scored": true, "text_kr": "나는 많은 것을 소유하지 않는 소박한 삶을 살려고 노력한다.", "text_en": "I try to keep my life simple, as far as possessions are concerned." },
+        { "variable_name": "mvs_c_3_r", "position_in_scale": 9, "subscale": "centrality", "reverse_scored": true, "text_kr": "내가 무엇을 소유하고 있는지는 별로 중요하지 않다.", "text_en": "The things I own aren't all that important to me." },
+        { "variable_name": "mvs_c_4", "position_in_scale": 10, "subscale": "centrality", "reverse_scored": false, "text_kr": "나는 실용적이지 않은 물건을 사는 것을 좋아한다.", "text_en": "I enjoy spending money on things that aren't practical." },
+        { "variable_name": "mvs_c_5", "position_in_scale": 11, "subscale": "centrality", "reverse_scored": false, "text_kr": "쇼핑은 내게 큰 기쁨을 준다.", "text_en": "Buying things gives me a lot of pleasure." },
+        { "variable_name": "mvs_c_6", "position_in_scale": 12, "subscale": "centrality", "reverse_scored": false, "text_kr": "나는 럭셔리한(호화로운) 삶이 좋다.", "text_en": "I like a lot of luxury in my life." },
+        { "variable_name": "mvs_c_7_r", "position_in_scale": 13, "subscale": "centrality", "reverse_scored": true, "text_kr": "나는 내 주변 사람들에 비해 물질적 소유물을 덜 중요하게 여긴다.", "text_en": "I put less emphasis on material things than most people I know." },
+        { "variable_name": "mvs_h_1_r", "position_in_scale": 14, "subscale": "happiness", "reverse_scored": true, "text_kr": "나는 인생을 즐겁게 사는 데 꼭 필요한 모든 것들을 갖고 있다.", "text_en": "I have all the things I really need to enjoy life." },
+        { "variable_name": "mvs_h_2", "position_in_scale": 15, "subscale": "happiness", "reverse_scored": false, "text_kr": "내가 갖고 있지 않은 어떤 물건을 소유하게 되면 내 삶은 더 나아질 것이다.", "text_en": "My life would be better if I owned certain things I don't have." },
+        { "variable_name": "mvs_h_3_r", "position_in_scale": 16, "subscale": "happiness", "reverse_scored": true, "text_kr": "더 비싸고 좋은 물건들을 소유한다고 해서 내가 더 행복해지는 것은 아니다.", "text_en": "I wouldn't be any happier if I owned nicer things." },
+        { "variable_name": "mvs_h_4", "position_in_scale": 17, "subscale": "happiness", "reverse_scored": false, "text_kr": "더 많은 것들을 구매할 수 있는 경제적 여유가 주어진다면 나는 더 행복해질 것이다.", "text_en": "I'd be happier if I could afford to buy more things." },
+        { "variable_name": "mvs_h_5", "position_in_scale": 18, "subscale": "happiness", "reverse_scored": false, "text_kr": "내가 갖고 싶은 모든 것들을 살 수 있는 경제적 여유가 없다는 것 때문에 매우 속상하다.", "text_en": "It sometimes bothers me quite a bit that I can't afford to buy all the things I'd like." }
+      ]
+    },
+    {
+      "scale_id": "small_pes",
+      "name_kr": "작은 자아 및 심리적 특권 의식 척도",
+      "name_en": "Small Self + Psychological Entitlement Scale (Small_PES)",
+      "source": "Small Self: Piff et al. (2015) / Shiota et al. (2007); PES: Campbell et al. (2004)",
+      "response_scale": { "type": "likert", "points": 7, "anchors_proposed_en": "1 = Strongly disagree ... 7 = Strongly agree", "verified": false },
+      "scoring_note": "This is TWO instruments combined. Score Small Self (items 1-2) and PES (items 3-11) as SEPARATE variables — do NOT sum together. PES has one reverse item ('I do not necessarily deserve special treatment') = pes_5_r (HIGH confidence). Confirm Small Self scoring direction against its source.",
+      "items": [
+        { "variable_name": "smallself_1", "position_in_scale": 1, "subscale": "small_self", "reverse_scored": false, "text_kr": "나는 대체로 내 자신이 초라하게 느껴진다.", "text_en": "In general, I feel relatively small." },
+        { "variable_name": "smallself_2", "position_in_scale": 2, "subscale": "small_self", "reverse_scored": false, "text_kr": "나는 대체로 내 자신이 보잘것없는 존재라고 느낀다.", "text_en": "In general, I feel insignificant." },
+        { "variable_name": "pes_1", "position_in_scale": 3, "subscale": "entitlement", "reverse_scored": false, "text_kr": "나는 솔직히 다른 사람들보다 더 많은 것을 누릴 자격이 있다고 느낀다.", "text_en": "I honestly feel I am just more deserving than others." },
+        { "variable_name": "pes_2", "position_in_scale": 4, "subscale": "entitlement", "reverse_scored": false, "text_kr": "중요한 일들은 나에게 주어져야 한다.", "text_en": "Great things should come to me." },
+        { "variable_name": "pes_3", "position_in_scale": 5, "subscale": "entitlement", "reverse_scored": false, "text_kr": "위급한 상황에서 내가 가장 먼저 구조될 자격이 있다.", "text_en": "If I were on the Titanic, I would deserve to be on the first lifeboat!" },
+        { "variable_name": "pes_4", "position_in_scale": 6, "subscale": "entitlement", "reverse_scored": false, "text_kr": "나는 그럴 만한 가치가 있기에 최고를 요구한다.", "text_en": "I demand the best because I am worth it." },
+        { "variable_name": "pes_5_r", "position_in_scale": 7, "subscale": "entitlement", "reverse_scored": true, "text_kr": "내가 꼭 특별 대우를 받을 자격이 있는 것은 아니다.", "text_en": "I do not necessarily deserve special treatment." },
+        { "variable_name": "pes_6", "position_in_scale": 8, "subscale": "entitlement", "reverse_scored": false, "text_kr": "나는 내 인생에서 더 많은 것들을 누릴 자격이 있다.", "text_en": "I deserve more things in my life." },
+        { "variable_name": "pes_7", "position_in_scale": 9, "subscale": "entitlement", "reverse_scored": false, "text_kr": "나와 같은 사람들은 때때로 더 많은 휴식을 누릴 자격이 있다.", "text_en": "People like me deserve an extra break now and then." },
+        { "variable_name": "pes_8", "position_in_scale": 10, "subscale": "entitlement", "reverse_scored": false, "text_kr": "모든 일이 내가 원하는 대로 되어야 한다.", "text_en": "Things should go my way." },
+        { "variable_name": "pes_9", "position_in_scale": 11, "subscale": "entitlement", "reverse_scored": false, "text_kr": "나는 모든 것을 더 많이 누릴 자격이 있다고 느낀다.", "text_en": "I feel entitled to more of everything." }
+      ]
+    },
+    {
+      "scale_id": "awe_sf",
+      "name_kr": "짧은 형태의 경외감 경험 척도",
+      "name_en": "Awe Experience Scale - Short Form (AWE-SF)",
+      "source": "Yaden et al. (2019)",
+      "response_scale": { "type": "likert", "points": 7, "anchors_proposed_en": "1 = Strongly disagree ... 7 = Strongly agree", "verified": false },
+      "scoring_note": "No reverse-scored items (verify). Six two-item factors: time perception (1,2), self-diminishment (3,4), connectedness (5,6), vastness (7,8), physical sensations (9,10), need for accommodation (11,12).",
+      "items": [
+        { "variable_name": "awe_sf_1", "position_in_scale": 1, "subscale": "time_perception", "reverse_scored": false, "text_kr": "나는 순간 주변의 모든 것이 느려지는 느낌을 받았다.", "text_en": "I sensed things momentarily slow down." },
+        { "variable_name": "awe_sf_2", "position_in_scale": 2, "subscale": "time_perception", "reverse_scored": false, "text_kr": "나는 시간이 천천히 흐르는 것처럼 느꼈다.", "text_en": "I noticed time slowing." },
+        { "variable_name": "awe_sf_3", "position_in_scale": 3, "subscale": "self_diminishment", "reverse_scored": false, "text_kr": "내 존재가 작아진 느낌이 들었다.", "text_en": "I felt my sense of self was diminished." },
+        { "variable_name": "awe_sf_4", "position_in_scale": 4, "subscale": "self_diminishment", "reverse_scored": false, "text_kr": "내 자신이 위축된 것을 느꼈다.", "text_en": "I felt my sense of self shrink." },
+        { "variable_name": "awe_sf_5", "position_in_scale": 5, "subscale": "connectedness", "reverse_scored": false, "text_kr": "나는 모든 것과 연결되어 있다는 느낌을 받았다.", "text_en": "I had the sense of being connected to everything." },
+        { "variable_name": "awe_sf_6", "position_in_scale": 6, "subscale": "connectedness", "reverse_scored": false, "text_kr": "나는 모든 살아있는 것들과 교감하는 느낌을 받았다.", "text_en": "I felt a sense of communion with all living things." },
+        { "variable_name": "awe_sf_7", "position_in_scale": 7, "subscale": "vastness", "reverse_scored": false, "text_kr": "나는 어떤 거대한 존재와 함께 있다고 느꼈다.", "text_en": "I felt that I was in the presence of something grand." },
+        { "variable_name": "awe_sf_8", "position_in_scale": 8, "subscale": "vastness", "reverse_scored": false, "text_kr": "나 보다 더 큰 무언가를 경험했다.", "text_en": "I experienced something greater than myself." },
+        { "variable_name": "awe_sf_9", "position_in_scale": 9, "subscale": "physical_sensations", "reverse_scored": false, "text_kr": "나는 놀라서 입이 떡 벌어졌다.", "text_en": "I felt my jaw drop." },
+        { "variable_name": "awe_sf_10", "position_in_scale": 10, "subscale": "physical_sensations", "reverse_scored": false, "text_kr": "나는 소름이 돋았다.", "text_en": "I had goosebumps." },
+        { "variable_name": "awe_sf_11", "position_in_scale": 11, "subscale": "need_for_accommodation", "reverse_scored": false, "text_kr": "내가 경험한 것을 이해하고 받아들이기가 쉽지 않았다.", "text_en": "I felt challenged to mentally process what I was experiencing." },
+        { "variable_name": "awe_sf_12", "position_in_scale": 12, "subscale": "need_for_accommodation", "reverse_scored": false, "text_kr": "나는 그 경험을 완전히 이해하는 것이 힘들었다.", "text_en": "I found it hard to comprehend the experience in full." }
+      ]
+    }
+  ]
+}
