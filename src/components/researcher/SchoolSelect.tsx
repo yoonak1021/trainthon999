@@ -7,6 +7,7 @@ import {
   groupSchools,
   schoolById,
   schoolLabel,
+  schoolOptionNames,
 } from '../../data/universities'
 
 type Props = {
@@ -68,8 +69,8 @@ export function SchoolSelect({
           required={schoolId !== OTHER_SCHOOL_ID}
           value={open ? query : selectedLabel}
           placeholder={t(
-            '학교 이름 검색 (한국 · 북미 · 유럽)',
-            'Search schools (Korea, North America, Europe)',
+            '한글 또는 영문 검색 (예: 서울대, Harvard)',
+            'Search in Korean or English (e.g. Seoul, Harvard)',
           )}
           onFocus={() => {
             setOpen(true)
@@ -99,21 +100,29 @@ export function SchoolSelect({
                 <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
                   {locale === 'ko' ? group.labelKr : group.labelEn}
                 </p>
-                {schools.map((school) => (
-                  <button
-                    key={school.id}
-                    type="button"
-                    role="option"
-                    aria-selected={schoolId === school.id}
-                    onClick={() => pick(school.id)}
-                    className={[
-                      'block w-full px-3 py-2 text-left text-sm hover:bg-mist/70',
-                      schoolId === school.id ? 'bg-sea/10 font-semibold text-sea-deep' : 'text-ink',
-                    ].join(' ')}
-                  >
-                    {schoolLabel(school, locale)}
-                  </button>
-                ))}
+                {schools.map((school) => {
+                  const names = schoolOptionNames(school, locale, query)
+                  return (
+                    <button
+                      key={school.id}
+                      type="button"
+                      role="option"
+                      aria-selected={schoolId === school.id}
+                      onClick={() => pick(school.id)}
+                      className={[
+                        'block w-full px-3 py-2 text-left text-sm hover:bg-mist/70',
+                        schoolId === school.id ? 'bg-sea/10 font-semibold text-sea-deep' : 'text-ink',
+                      ].join(' ')}
+                    >
+                      <span className="block">{names.primary}</span>
+                      {names.secondary && (
+                        <span className="mt-0.5 block text-xs font-normal text-ink-soft">
+                          {names.secondary}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
               </li>
             )
           })}

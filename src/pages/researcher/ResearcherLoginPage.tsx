@@ -101,7 +101,7 @@ export function ResearcherLoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  placeholder={t('예: 강윤아', 'e.g. Yoona Kang')}
+                  placeholder={t('예: 홍길동', 'e.g. John Smith')}
                   className="w-full rounded-xl border border-sand bg-white px-3 py-2.5 outline-none transition focus:border-sea/40 focus:ring-4 focus:ring-sea/10"
                 />
               </label>

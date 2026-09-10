@@ -395,14 +395,37 @@ export function schoolLabel(school: School, locale: 'ko' | 'en'): string {
   return locale === 'ko' ? school.nameKr : school.nameEn
 }
 
+function foldSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+}
+
+export function prefersEnglishSchoolLabel(query: string, locale: 'ko' | 'en'): boolean {
+  const q = query.trim()
+  if (/[a-z]/i.test(q) && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(q)) return true
+  return locale === 'en'
+}
+
+export function schoolOptionNames(
+  school: School,
+  locale: 'ko' | 'en',
+  query: string,
+): { primary: string; secondary: string | null } {
+  const primary = prefersEnglishSchoolLabel(query, locale) ? school.nameEn : school.nameKr
+  const secondary = primary === school.nameEn ? school.nameKr : school.nameEn
+  return { primary, secondary: primary === secondary ? null : secondary }
+}
+
 export function filterSchools(query: string): School[] {
-  const q = query.trim().toLowerCase()
+  const q = foldSearch(query.trim())
   if (!q) return UNIVERSITIES
   return UNIVERSITIES.filter(
     (school) =>
-      school.nameEn.toLowerCase().includes(q) ||
-      school.nameKr.toLowerCase().includes(q) ||
-      school.country.toLowerCase().includes(q),
+      foldSearch(school.nameEn).includes(q) ||
+      foldSearch(school.nameKr).includes(q) ||
+      foldSearch(school.country).includes(q),
   )
 }
 
